@@ -55,6 +55,9 @@ TEST_F(RendererPreferencesUtilTest, WebRTCPostQuantumKeyAgreement) {
 }
 
 TEST_F(RendererPreferencesUtilTest, WebRTCIPHandlingPolicy) {
+  EXPECT_EQ(pref_service_->GetString(prefs::kWebRTCIPHandlingPolicy),
+            blink::kWebRTCIPHandlingDefaultPublicInterfaceOnly);
+
   std::array<const char*, 5> webrtc_ip_handling_policy_values = {
       blink::kWebRTCIPHandlingDefault,
       blink::kWebRTCIPHandlingDefaultPublicAndPrivateInterfaces,

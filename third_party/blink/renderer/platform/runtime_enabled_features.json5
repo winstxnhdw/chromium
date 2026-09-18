@@ -3475,6 +3475,7 @@
     },
     {
       name: "GlobalPrivacyControlForce",
+      status: "stable",
     },
     {
       name: "GlobalPrivacyControlTest",

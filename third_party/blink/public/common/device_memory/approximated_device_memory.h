@@ -13,16 +13,15 @@ namespace blink {
 
 class ApproximatedDeviceMemory {
  public:
-  // Caches the device's physical memory in static members.
+  // Initializes the standardized device-memory value exposed to the web.
   static void BLINK_COMMON_EXPORT Initialize();
 
-  // Returns an approximation of the physical memory rounded to the most
-  // significant bit. This information is provided to web-developers to allow
-  // them to customize the experience of their page to the possible available
-  // device memory.
+  // Returns a device-memory value that is independent of physical RAM to
+  // reduce fingerprintability.
   static float BLINK_COMMON_EXPORT GetApproximatedDeviceMemory();
 
-  // Override the value of the physical memory for testing.
+  // Changes the physical-memory input for testing. The reported value remains
+  // standardized.
   static void BLINK_COMMON_EXPORT SetPhysicalMemoryMBForTesting(int64_t);
 
  private:
