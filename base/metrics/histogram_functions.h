@@ -24,6 +24,10 @@
 //
 // Functions for recording metrics.
 //
+// This build intentionally discards samples passed through the
+// `UmaHistogram*` helper API. The declarations remain available so call sites
+// and component ABI stay unchanged.
+//
 // For best practices on deciding when to emit to a histogram and what form
 // the histogram should take, see
 // https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md
