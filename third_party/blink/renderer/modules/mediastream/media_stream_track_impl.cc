@@ -82,6 +82,12 @@ namespace blink {
 
 namespace {
 
+constexpr int kReportedDisplayCaptureWidth = 1920;
+constexpr int kReportedDisplayCaptureHeight = 1080;
+constexpr double kReportedDisplayCaptureAspectRatio =
+    static_cast<double>(kReportedDisplayCaptureWidth) /
+    kReportedDisplayCaptureHeight;
+
 // The set of constrainable properties for image capture is available at
 // https://w3c.github.io/mediacapture-image/#constrainable-properties
 // TODO(guidou): Integrate image-capture constraints processing with the
@@ -215,16 +221,11 @@ std::optional<media::mojom::DisplayCaptureSurfaceType> GetDisplayCaptureType(
   return settings.display_surface;
 }
 
-String GetDisplaySurfaceString(media::mojom::DisplayCaptureSurfaceType value) {
-  switch (value) {
-    case media::mojom::DisplayCaptureSurfaceType::MONITOR:
-      return "monitor";
-    case media::mojom::DisplayCaptureSurfaceType::WINDOW:
-      return "window";
-    case media::mojom::DisplayCaptureSurfaceType::BROWSER:
-      return "browser";
-  }
-  NOTREACHED();
+String GetDisplaySurfaceString(media::mojom::DisplayCaptureSurfaceType) {
+  // Always expose display capture as monitor capture to websites. The actual
+  // surface type remains available internally so window- and tab-specific
+  // capture behavior is unchanged.
+  return "monitor";
 }
 
 }  // namespace
@@ -337,6 +338,12 @@ String MediaStreamTrackImpl::id() const {
 }
 
 String MediaStreamTrackImpl::label() const {
+  if (component_->GetSourceType() == MediaStreamSource::kTypeVideo) {
+    const std::optional<const MediaStreamDevice> source_device = device();
+    if (source_device && source_device->display_media_info) {
+      return "screen:0:0";
+    }
+  }
   return component_->GetSourceName();
 }
 
@@ -546,27 +553,45 @@ MediaTrackCapabilities* MediaStreamTrackImpl::getCapabilities() const {
   }
 
   if (component_->GetSourceType() == MediaStreamSource::kTypeVideo) {
-    if (platform_capabilities.width.size() == 2) {
+    const std::optional<const MediaStreamDevice> source_device = device();
+    const bool is_display_capture =
+        source_device && source_device->display_media_info;
+    if (is_display_capture) {
       LongRange* width = LongRange::Create();
-      width->setMin(platform_capabilities.width[0]);
-      width->setMax(IsCapturedSurfaceResolutionActive(platform_settings)
-                        ? platform_settings.physical_frame_size->width()
-                        : platform_capabilities.width[1]);
+      width->setMin(kReportedDisplayCaptureWidth);
+      width->setMax(kReportedDisplayCaptureWidth);
       capabilities->setWidth(width);
-    }
-    if (platform_capabilities.height.size() == 2) {
       LongRange* height = LongRange::Create();
-      height->setMin(platform_capabilities.height[0]);
-      height->setMax(IsCapturedSurfaceResolutionActive(platform_settings)
-                         ? platform_settings.physical_frame_size->height()
-                         : platform_capabilities.height[1]);
+      height->setMin(kReportedDisplayCaptureHeight);
+      height->setMax(kReportedDisplayCaptureHeight);
       capabilities->setHeight(height);
-    }
-    if (platform_capabilities.aspect_ratio.size() == 2) {
       DoubleRange* aspect_ratio = DoubleRange::Create();
-      aspect_ratio->setMin(platform_capabilities.aspect_ratio[0]);
-      aspect_ratio->setMax(platform_capabilities.aspect_ratio[1]);
+      aspect_ratio->setMin(kReportedDisplayCaptureAspectRatio);
+      aspect_ratio->setMax(kReportedDisplayCaptureAspectRatio);
       capabilities->setAspectRatio(aspect_ratio);
+    } else {
+      if (platform_capabilities.width.size() == 2) {
+        LongRange* width = LongRange::Create();
+        width->setMin(platform_capabilities.width[0]);
+        width->setMax(IsCapturedSurfaceResolutionActive(platform_settings)
+                          ? platform_settings.physical_frame_size->width()
+                          : platform_capabilities.width[1]);
+        capabilities->setWidth(width);
+      }
+      if (platform_capabilities.height.size() == 2) {
+        LongRange* height = LongRange::Create();
+        height->setMin(platform_capabilities.height[0]);
+        height->setMax(IsCapturedSurfaceResolutionActive(platform_settings)
+                           ? platform_settings.physical_frame_size->height()
+                           : platform_capabilities.height[1]);
+        capabilities->setHeight(height);
+      }
+      if (platform_capabilities.aspect_ratio.size() == 2) {
+        DoubleRange* aspect_ratio = DoubleRange::Create();
+        aspect_ratio->setMin(platform_capabilities.aspect_ratio[0]);
+        aspect_ratio->setMax(platform_capabilities.aspect_ratio[1]);
+        capabilities->setAspectRatio(aspect_ratio);
+      }
     }
     if (platform_capabilities.frame_rate.size() == 2) {
       DoubleRange* frame_rate = DoubleRange::Create();
@@ -594,8 +619,7 @@ MediaTrackCapabilities* MediaStreamTrackImpl::getCapabilities() const {
     capabilities->setFacingMode(facing_mode);
     capabilities->setResizeMode({WebMediaStreamTrack::kResizeModeNone,
                                  WebMediaStreamTrack::kResizeModeRescale});
-    const std::optional<const MediaStreamDevice> source_device = device();
-    if (source_device && source_device->display_media_info) {
+    if (is_display_capture) {
       capabilities->setDisplaySurface(GetDisplaySurfaceString(
           source_device->display_media_info->display_surface));
     }
@@ -689,6 +713,9 @@ MediaTrackSettings* MediaStreamTrackImpl::getSettings() const {
   }
 
   if (platform_settings.display_surface) {
+    settings->setWidth(kReportedDisplayCaptureWidth);
+    settings->setHeight(kReportedDisplayCaptureHeight);
+    settings->setAspectRatio(kReportedDisplayCaptureAspectRatio);
     settings->setDisplaySurface(
         GetDisplaySurfaceString(*platform_settings.display_surface));
   }
@@ -712,7 +739,9 @@ MediaTrackSettings* MediaStreamTrackImpl::getSettings() const {
   }
 
   if (IsCapturedSurfaceResolutionActive(platform_settings)) {
-    if (platform_settings.device_scale_factor) {
+    if (platform_settings.display_surface) {
+      settings->setScreenPixelRatio(1.0);
+    } else if (platform_settings.device_scale_factor) {
       settings->setScreenPixelRatio(*platform_settings.device_scale_factor);
     }
   }
