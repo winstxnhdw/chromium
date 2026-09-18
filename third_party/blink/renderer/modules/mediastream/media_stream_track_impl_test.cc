@@ -21,8 +21,12 @@
 #include "third_party/blink/renderer/bindings/core/v8/script_promise_tester.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_binding_for_testing.h"
 #include "third_party/blink/renderer/bindings/modules/v8/v8_constrain_long_range.h"
+#include "third_party/blink/renderer/bindings/modules/v8/v8_double_range.h"
+#include "third_party/blink/renderer/bindings/modules/v8/v8_long_range.h"
 #include "third_party/blink/renderer/bindings/modules/v8/v8_media_stream_track_state.h"
+#include "third_party/blink/renderer/bindings/modules/v8/v8_media_track_capabilities.h"
 #include "third_party/blink/renderer/bindings/modules/v8/v8_media_track_constraints.h"
+#include "third_party/blink/renderer/bindings/modules/v8/v8_media_track_settings.h"
 #include "third_party/blink/renderer/bindings/modules/v8/v8_union_constrainlongrange_long.h"
 #include "third_party/blink/renderer/core/dom/events/native_event_listener.h"
 #include "third_party/blink/renderer/core/frame/frame_test_helpers.h"
@@ -137,12 +141,21 @@ media::VideoCaptureFormat GetDefaultVideoContentCaptureFormat() {
 }
 
 std::tuple<MediaStreamComponent*, MockMediaStreamVideoSource*>
-MakeMockDisplayVideoCaptureComponent() {
+MakeMockDisplayVideoCaptureComponent(
+    std::optional<media::mojom::DisplayCaptureSurfaceType> display_surface =
+        std::nullopt) {
   auto platform_source = std::make_unique<MockMediaStreamVideoSource>(
       GetDefaultVideoContentCaptureFormat(), false);
-  platform_source->SetDevice(
-      MediaStreamDevice(mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE,
-                        "fakeSourceId", "fakeWindowCapturer"));
+  MediaStreamDevice device(mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE,
+                           "fakeSourceId", "fakeWindowCapturer");
+  if (display_surface) {
+    device.display_media_info = media::mojom::DisplayMediaInformation::New(
+        *display_surface,
+        /*logical_surface=*/true, media::mojom::CursorCaptureType::NEVER,
+        /*capture_handle=*/nullptr,
+        /*initial_zoom_level=*/100);
+  }
+  platform_source->SetDevice(device);
   MockMediaStreamVideoSource* platform_source_ptr = platform_source.get();
   MediaStreamSource* source = MakeGarbageCollected<MediaStreamSource>(
       "id", MediaStreamSource::StreamType::kTypeVideo, "name",
@@ -196,6 +209,50 @@ class MediaStreamTrackImplTest : public testing::Test {
   test::TaskEnvironment task_environment_;
   ScopedTestingPlatformSupport<IOTaskRunnerTestingPlatformSupport> platform_;
 };
+
+TEST_F(MediaStreamTrackImplTest, ReportsWindowCaptureAs1080pMonitorCapture) {
+  V8TestingScope v8_scope;
+  MediaStreamComponent* component =
+      std::get<0>(MakeMockDisplayVideoCaptureComponent(
+          media::mojom::DisplayCaptureSurfaceType::WINDOW));
+  MediaStreamVideoTrack::From(component)->SetTargetSize(640, 480);
+  MediaStreamTrack* track = MakeGarbageCollected<MediaStreamTrackImpl>(
+      v8_scope.GetExecutionContext(), component);
+
+  EXPECT_EQ(component->GetSourceName(), "name");
+  EXPECT_EQ(track->label(), "screen:0:0");
+
+  MediaStreamTrackPlatform::Settings platform_settings;
+  component->GetSettings(platform_settings);
+  EXPECT_EQ(platform_settings.width, 640);
+  EXPECT_EQ(platform_settings.height, 480);
+  ASSERT_TRUE(platform_settings.display_surface);
+  EXPECT_EQ(*platform_settings.display_surface,
+            media::mojom::DisplayCaptureSurfaceType::WINDOW);
+
+  MediaTrackSettings* settings = track->getSettings();
+  ASSERT_TRUE(settings->hasWidth());
+  EXPECT_EQ(settings->width(), 1920);
+  ASSERT_TRUE(settings->hasHeight());
+  EXPECT_EQ(settings->height(), 1080);
+  ASSERT_TRUE(settings->hasAspectRatio());
+  EXPECT_DOUBLE_EQ(settings->aspectRatio(), 16.0 / 9.0);
+  ASSERT_TRUE(settings->hasDisplaySurface());
+  EXPECT_EQ(settings->displaySurface(), "monitor");
+
+  MediaTrackCapabilities* capabilities = track->getCapabilities();
+  ASSERT_TRUE(capabilities->hasWidth());
+  EXPECT_EQ(capabilities->width()->min(), 1920);
+  EXPECT_EQ(capabilities->width()->max(), 1920);
+  ASSERT_TRUE(capabilities->hasHeight());
+  EXPECT_EQ(capabilities->height()->min(), 1080);
+  EXPECT_EQ(capabilities->height()->max(), 1080);
+  ASSERT_TRUE(capabilities->hasAspectRatio());
+  EXPECT_DOUBLE_EQ(capabilities->aspectRatio()->min(), 16.0 / 9.0);
+  EXPECT_DOUBLE_EQ(capabilities->aspectRatio()->max(), 16.0 / 9.0);
+  ASSERT_TRUE(capabilities->hasDisplaySurface());
+  EXPECT_EQ(capabilities->displaySurface(), "monitor");
+}
 
 TEST_F(MediaStreamTrackImplTest, StopTrackTriggersObservers) {
   V8TestingScope v8_scope;
