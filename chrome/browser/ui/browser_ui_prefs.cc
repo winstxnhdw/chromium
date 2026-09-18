@@ -157,8 +157,9 @@ void RegisterBrowserUserPrefs(user_prefs::PrefRegistrySyncable* registry) {
   registry->RegisterBooleanPref(prefs::kPrintPreviewUseSystemDefaultPrinter,
                                 false);
 #endif
-  registry->RegisterStringPref(prefs::kWebRTCIPHandlingPolicy,
-                               blink::kWebRTCIPHandlingDefault);
+  registry->RegisterStringPref(
+      prefs::kWebRTCIPHandlingPolicy,
+      blink::kWebRTCIPHandlingDefaultPublicInterfaceOnly);
   registry->RegisterListPref(prefs::kWebRTCIPHandlingUrl, base::ListValue());
   registry->RegisterBooleanPref(prefs::kWebRTCPostQuantumKeyAgreement, false);
   registry->RegisterStringPref(prefs::kWebRTCUDPPortRange, std::string());

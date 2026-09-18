@@ -85,6 +85,15 @@ enum GrantSource {
 }  // namespace
 
 namespace content_settings {
+
+TEST(CookieSettingsProfilePrefsTest, BlocksThirdPartyCookiesByDefault) {
+  sync_preferences::TestingPrefServiceSyncable prefs;
+  CookieSettings::RegisterProfilePrefs(prefs.registry());
+
+  EXPECT_EQ(static_cast<int>(CookieControlsMode::kBlockThirdParty),
+            prefs.GetInteger(prefs::kCookieControlsMode));
+}
+
 class CookieSettingsObserver : public CookieSettings::Observer {
  public:
   explicit CookieSettingsObserver(CookieSettings* settings)
@@ -152,6 +161,10 @@ class CookieSettingsTestBase : public testing::Test {
   void SetUp() override {
     ContentSettingsRegistry::GetInstance()->ResetForTest();
     CookieSettings::RegisterProfilePrefs(prefs_.registry());
+    // Preserve the historical test baseline; the registration default is
+    // covered independently above.
+    prefs_.SetInteger(prefs::kCookieControlsMode,
+                      static_cast<int>(CookieControlsMode::kIncognitoOnly));
     HostContentSettingsMap::RegisterProfilePrefs(prefs_.registry());
     privacy_sandbox::RegisterProfilePrefs(prefs_.registry());
     settings_map_ = new HostContentSettingsMap(
