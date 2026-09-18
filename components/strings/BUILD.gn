@@ -129,10 +129,10 @@ if (is_android) {
 }
 
 grit_strings("components_branded_strings") {
-  source = "../components_${branding_path_product}_strings.grd"
+  source = "../components_google_chrome_strings.grd"
   inputs = process_file_template(
           xtb_locales,
-          [ "components_${branding_path_product}_strings_{{source_name_part}}.xtb" ])
+          [ "components_google_chrome_strings_{{source_name_part}}.xtb" ])
   outputs = [ "grit/components_branded_strings.h" ]
 }
 

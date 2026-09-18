@@ -15,7 +15,6 @@
 #include "extensions/browser/extension_event_histogram_value.h"
 #include "extensions/buildflags/buildflags.h"
 #include "extensions/common/api/management.h"
-#include "extensions/common/extension_features.h"
 #include "extensions/common/switches.h"
 #include "net/dns/mock_host_resolver.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
@@ -98,27 +97,17 @@ IN_PROC_BROWSER_TEST_P(WebstoreDomainBrowserTest, ExpectedAvailability) {
   EXPECT_EQ(web_contents->GetPrimaryMainFrame()->GetLastCommittedURL(),
             webstore_url);
 
-  // The webstorePrivate and management APIs are only available on the new
-  // webstore domain. The old site gained access to them via the hosted app,
-  // which is no longer allowed to access webstorePrivate or management (since
-  // the hosted app isn't used).
-  // The runtime API is still available since it's always available to all
-  // items, but it doesn't really have any capabilities (and the hosted app is
-  // still safe; just unused).
+  // Keep the Chrome Web Store APIs available on both the current and legacy
+  // Store origins. The runtime API is granted implicitly when these APIs are
+  // exposed to a web page.
   bool expect_fun_apis = GetParam() == GURL(kNewWebstoreURL) ||
+                         GetParam() == GURL(kWebstoreAppBaseURL) ||
                          GetParam() == GURL(kWebstoreOverrideURL);
 
   EXPECT_EQ(expect_fun_apis, is_api_available("webstorePrivate"));
   EXPECT_EQ(expect_fun_apis, is_api_available("management"));
 
-  // Even runtime shouldn't be available for the old hosted app URL if the
-  // hosted app isn't installed.
-  bool expect_runtime =
-      GetParam() == GURL(kNewWebstoreURL) ||
-      GetParam() == GURL(kWebstoreOverrideURL) ||
-      (GetParam() == GURL(kWebstoreAppBaseURL) &&
-       base::FeatureList::IsEnabled(extensions_features::kWebstoreHostedApp));
-  EXPECT_EQ(expect_runtime, is_api_available("runtime"));
+  EXPECT_EQ(expect_fun_apis, is_api_available("runtime"));
 
   ASSERT_TRUE(NavigateToURL(web_contents, not_webstore_url));
   EXPECT_EQ(web_contents->GetPrimaryMainFrame()->GetLastCommittedURL(),
@@ -152,8 +141,8 @@ IN_PROC_BROWSER_TEST_P(WebstoreDomainBrowserTest, CanReceiveEvents) {
     }
   )";
 
-  // The webstore hosted app no longer has access to the management API.
   bool expect_management = GetParam() == GURL(kNewWebstoreURL) ||
+                           GetParam() == GURL(kWebstoreAppBaseURL) ||
                            GetParam() == GURL(kWebstoreOverrideURL);
 
   std::string js_result =
