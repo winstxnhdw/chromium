@@ -480,7 +480,7 @@ source_set("testing_browser_process_impl") {
   if (enable_background_mode) {
     deps += [ "//chrome/browser/background/extensions" ]
   }
-  if (enable_extensions) {
+  if (enable_platform_apps) {
     deps += [
       "//chrome/browser/apps/platform_apps",
       "//chrome/browser/ui/apps",

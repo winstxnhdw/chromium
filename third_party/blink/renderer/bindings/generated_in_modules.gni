@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//components/on_device_translation/buildflags/features.gni")
 import("//services/device/public/cpp/compute_pressure/buildflags.gni")
 import("//third_party/blink/renderer/config.gni")
 
@@ -706,14 +707,6 @@ generated_dictionary_sources_in_modules = [
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_key_system_track_configuration.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_landmark.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_landmark.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detection_result.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detection_result.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_create_core_options.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_create_core_options.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_create_options.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_create_options.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_detect_options.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_detect_options.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_model_append_options.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_model_append_options.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_model_clone_options.cc",
@@ -1336,12 +1329,6 @@ generated_dictionary_sources_in_modules = [
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_text_encoder_encode_into_result.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_top_level_storage_access_permission_descriptor.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_top_level_storage_access_permission_descriptor.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_create_core_options.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_create_core_options.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_create_options.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_create_options.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_translate_options.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_translate_options.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_usb_connection_event_init.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_usb_connection_event_init.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_usb_control_transfer_parameters.cc",
@@ -1495,6 +1482,25 @@ generated_dictionary_sources_in_modules = [
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_xr_webgl_layer_init.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_xr_webgl_layer_init.h",
 ]
+
+if (enable_on_device_translation) {
+  generated_dictionary_sources_in_modules += [
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detection_result.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detection_result.h",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_create_core_options.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_create_core_options.h",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_create_options.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_create_options.h",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_detect_options.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector_detect_options.h",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_create_core_options.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_create_core_options.h",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_create_options.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_create_options.h",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_translate_options.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator_translate_options.h",
+  ]
+}
 
 if (enable_compute_pressure) {
   generated_dictionary_sources_in_modules += [
@@ -2579,8 +2585,6 @@ generated_interface_sources_in_modules = [
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_keyboard_layout_map.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_khr_parallel_shader_compile.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_khr_parallel_shader_compile.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_model_params.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_model_params.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_model.cc",
@@ -3043,8 +3047,6 @@ generated_interface_sources_in_modules = [
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_track_default.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_track_default_list.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_track_default_list.h",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator.cc",
-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_url.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_url.h",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_usb.cc",
@@ -3361,6 +3363,15 @@ generated_namespace_sources_in_modules = [
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_gpu_texture_usage.cc",
   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_gpu_texture_usage.h",
 ]
+
+if (enable_on_device_translation) {
+  generated_interface_sources_in_modules += [
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_language_detector.h",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator.cc",
+    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_translator.h",
+  ]
+}
 
 if (enable_compute_pressure) {
   generated_interface_sources_in_modules += [

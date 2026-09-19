@@ -612,7 +612,6 @@ source_set("extensions") {
     "//components/saved_tab_groups/public",
     "//components/services/patch/content",
     "//components/services/unzip/content",
-    "//components/spellcheck/browser",
     "//components/supervised_user/core/browser",
     "//components/tabs:public",
     "//components/universal_optout",
@@ -891,9 +890,6 @@ source_set("extensions") {
       # TODO(crbug.com/343037853): Remove this circular dependency.
       "//chrome/browser/themes",
 
-      # TODO(crbug.com/344921703): Remove circular dependencies.
-      "//chrome/browser/sync_file_system",
-
       # TODO(crbug.com/345487716): Remove this circular dependency.
       "//chrome/browser/ui/views/side_panel",
     ]
@@ -922,7 +918,6 @@ source_set("extensions") {
       "//mojo/public/cpp/bindings",
     ]
     deps += [
-      "//apps",
       "//build:branding_buildflags",
       "//build:chromeos_buildflags",
       "//build/config/chromebox_for_meetings:buildflags",
@@ -957,7 +952,6 @@ source_set("extensions") {
       "//chrome/browser/search_engine_choice",
       "//chrome/browser/search_engines",
       "//chrome/browser/sync",
-      "//chrome/browser/sync_file_system",
       "//chrome/browser/themes",
       "//chrome/browser/ui/apps",
       "//chrome/browser/ui/browser_window",
@@ -1130,6 +1124,13 @@ source_set("extensions") {
       "//ui/strings",
       "//url",
     ]
+    if (enable_platform_apps) {
+      allow_circular_includes_from += [ "//chrome/browser/sync_file_system" ]
+      deps += [
+        "//apps",
+        "//chrome/browser/sync_file_system",
+      ]
+    }
 
     if (!is_chromeos) {
       sources += [
@@ -2168,7 +2169,6 @@ source_set("unit_tests") {
       "//chrome/browser/custom_handlers",
       "//chrome/browser/password_manager",
       "//chrome/browser/password_manager:test_support",
-      "//chrome/browser/spellchecker",
       "//chrome/browser/ui/global_error:test_support",
       "//chrome/browser/ui/passwords/settings:test_support",
       "//chrome/browser/web_applications:web_app_test",
@@ -2185,6 +2185,10 @@ source_set("unit_tests") {
       "//components/webauthn/core/browser:test_support",
       "//ui/base/clipboard:clipboard_test_support",
     ]
+
+    if (enable_spellcheck) {
+      deps += [ "//chrome/browser/spellchecker" ]
+    }
 
     if (is_win) {
       sources += [ "external_registry_loader_win_unittest.cc" ]
@@ -3057,11 +3061,9 @@ source_set("browser_tests") {
     }
 
     deps += [
-      "//apps:browser_tests",
       "//chrome/browser:browser_process_platform_part",
       "//chrome/browser/affiliations",
       "//chrome/browser/apps/app_service",
-      "//chrome/browser/apps/platform_apps:browser_test_support",
       "//chrome/browser/autofill",
       "//chrome/browser/background",
       "//chrome/browser/background:test_support",
@@ -3078,14 +3080,11 @@ source_set("browser_tests") {
       "//chrome/browser/extensions/api/messaging:test_support",
       "//chrome/browser/extensions/api/mime_handlers:browser_tests",
       "//chrome/browser/extensions/api/passwords_private:test_support",
-      "//chrome/browser/extensions/api/pdf_viewer_private:browser_tests",
       "//chrome/browser/hid",
       "//chrome/browser/password_manager",
       "//chrome/browser/password_manager:test_support",
-      "//chrome/browser/pdf:pdf_extension_test_utils",
       "//chrome/browser/prefetch",
       "//chrome/browser/service_worker:browser_tests",
-      "//chrome/browser/sync_file_system",
       "//chrome/browser/tab_list",
       "//chrome/browser/ui/global_error:test_support",
       "//chrome/browser/ui/hid",
@@ -3165,6 +3164,14 @@ source_set("browser_tests") {
       "//ui/web_dialogs:test_support",
     ]
 
+    if (enable_platform_apps) {
+      deps += [
+        "//apps:browser_tests",
+        "//chrome/browser/apps/platform_apps:browser_test_support",
+        "//chrome/browser/sync_file_system",
+      ]
+    }
+
     if (!is_chromeos) {
       # Chrome OS doesn't use background mode or download bubbles.
       deps += [
@@ -3201,7 +3208,11 @@ source_set("browser_tests") {
   }  # enable_extensions
 
   if (enable_pdf) {
-    deps += [ "//chrome/browser/pdf:pdf_extension_test_base" ]
+    deps += [
+      "//chrome/browser/extensions/api/pdf_viewer_private:browser_tests",
+      "//chrome/browser/pdf:pdf_extension_test_base",
+      "//chrome/browser/pdf:pdf_extension_test_utils",
+    ]
   }
 
   if (toolkit_views) {
@@ -3234,7 +3245,6 @@ source_set("interactive_ui_tests") {
       "api/runtime/runtime_interactive_apitest.cc",
       "api/tabs/tabs_interactive_uitest.cc",
       "api/tabs/window_open_interactive_apitest.cc",
-      "app_window_uitest.cc",
       "extension_apitest.cc",
       "extension_browsertest.cc",
       "extension_commands_global_registry_interactive_apitest.cc",
@@ -3251,7 +3261,6 @@ source_set("interactive_ui_tests") {
       "//base/test:test_support",
       "//build:chromeos_buildflags",
       "//chrome/browser/apps/app_service",
-      "//chrome/browser/apps/platform_apps:browser_test_support",
       "//chrome/browser/devtools:test_support",
       "//chrome/browser/omnibox",
       "//chrome/browser/profiles:profile",
@@ -3274,6 +3283,11 @@ source_set("interactive_ui_tests") {
       "//extensions/common",
       "//ui/base:ozone_buildflags",
     ]
+
+    if (enable_platform_apps) {
+      sources += [ "app_window_uitest.cc" ]
+      deps += [ "//chrome/browser/apps/platform_apps:browser_test_support" ]
+    }
 
     if (!is_chromeos) {
       deps += [

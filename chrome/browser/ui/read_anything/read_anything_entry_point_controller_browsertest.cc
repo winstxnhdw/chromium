@@ -219,10 +219,7 @@ class ReadAnythingEntryPointControllerOmniboxBrowserTest
  public:
   ReadAnythingEntryPointControllerOmniboxBrowserTest()
       : InteractiveFeaturePromoTestMixin(UseDefaultTrackerAllowingPromos(
-            {feature_engagement::kIPHReadingModePageActionLabelFeature})),
-        test_min_pdf_text_length_for_omnibox_(
-            ReadAnythingEntryPointController::SetMinPdfTextLengthForTesting(
-                500)) {
+            {feature_engagement::kIPHReadingModePageActionLabelFeature})) {
     scoped_feature_list_.InitWithFeatures(
         {features::kReadAnythingOmniboxChip,
          feature_engagement::kIPHReadingModePageActionLabelFeature},
@@ -231,7 +228,6 @@ class ReadAnythingEntryPointControllerOmniboxBrowserTest
 
  private:
   base::test::ScopedFeatureList scoped_feature_list_;
-  base::AutoReset<size_t> test_min_pdf_text_length_for_omnibox_;
 };
 
 IN_PROC_BROWSER_TEST_F(ReadAnythingEntryPointControllerOmniboxBrowserTest,

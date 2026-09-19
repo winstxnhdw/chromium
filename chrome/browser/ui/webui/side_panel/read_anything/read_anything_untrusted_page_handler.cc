@@ -19,8 +19,6 @@
 #include "chrome/browser/dom_distiller/dom_distiller_service_factory.h"
 #include "chrome/browser/language/language_model_manager_factory.h"
 #include "chrome/browser/profiles/profile.h"
-#include "chrome/browser/screen_ai/screen_ai_service_router.h"
-#include "chrome/browser/screen_ai/screen_ai_service_router_factory.h"
 #include "chrome/browser/speech/extension_api/tts_engine_extension_api.h"
 #include "chrome/browser/translate/chrome_translate_client.h"
 #include "chrome/browser/ui/read_anything/read_anything_controller.h"
@@ -44,7 +42,6 @@
 #include "components/language/core/browser/language_model_manager.h"
 #include "components/language/core/common/locale_util.h"
 #include "components/language_detection/core/constants.h"
-#include "components/pdf/browser/pdf_frame_util.h"
 #include "components/prefs/pref_service.h"
 #include "components/prefs/scoped_user_pref_update.h"
 #include "components/translate/core/browser/language_state.h"
@@ -77,12 +74,6 @@
 #include "ui/gfx/geometry/size.h"
 #include "url/gurl.h"
 #include "url/url_constants.h"
-
-#if BUILDFLAG(ENABLE_PDF)
-#include "components/pdf/common/pdf_util.h"
-#include "extensions/browser/mime_handler/mime_handler_stream_manager.h"
-#include "pdf/pdf_features.h"
-#endif  // BUILDFLAG(ENABLE_PDF)
 
 #if BUILDFLAG(IS_CHROMEOS)
 #include "ash/public/cpp/session/session_controller.h"
@@ -347,7 +338,7 @@ ReadAnythingUntrustedPageHandler::ReadAnythingUntrustedPageHandler(
     mojo::PendingRemote<UntrustedPage> page,
     mojo::PendingReceiver<UntrustedPageHandler> receiver,
     content::WebUI* web_ui,
-    bool use_screen_ai_service
+    bool /*use_screen_ai_service*/
 #if BUILDFLAG(IS_CHROMEOS)
     ,
     std::unique_ptr<ChromeOsExtensionWrapper> extension_wrapper
@@ -356,8 +347,7 @@ ReadAnythingUntrustedPageHandler::ReadAnythingUntrustedPageHandler(
     : profile_(Profile::FromWebUI(web_ui)),
       web_ui_(web_ui),
       receiver_(this, std::move(receiver)),
-      page_(std::move(page)),
-      use_screen_ai_service_(use_screen_ai_service)
+      page_(std::move(page))
 #if BUILDFLAG(IS_CHROMEOS)
       ,
       extension_wrapper_(std::move(extension_wrapper))
@@ -399,15 +389,6 @@ ReadAnythingUntrustedPageHandler::ReadAnythingUntrustedPageHandler(
   std::string prefs_lang = language_model->GetLanguages().front().lang_code;
   prefs_lang = language::ExtractBaseLanguage(prefs_lang);
   SetDefaultLanguageCode(prefs_lang);
-
-  if (use_screen_ai_service_) {
-    screen_ai::ScreenAIServiceRouterFactory::GetForBrowserContext(profile_)
-        ->GetServiceStateAsync(
-            screen_ai::ScreenAIServiceRouter::Service::kMainContentExtraction,
-            base::BindOnce(
-                &ReadAnythingUntrustedPageHandler::OnScreenAIServiceInitialized,
-                weak_factory_.GetWeakPtr()));
-  }
 
   if (features::IsReadAnythingWithReadabilityEnabled() &&
       !features::IsReadAnythingReadAloudPhraseHighlightingEnabled()) {
@@ -823,29 +804,13 @@ bool ReadAnythingUntrustedPageHandler::IsObservingTree(
     return false;
   }
 
-  content::WebContents* contents = !!pdf_observer_
-                                       ? pdf_observer_->web_contents()
-                                       : main_observer_->web_contents();
+  content::WebContents* contents = main_observer_->web_contents();
 
   if (!contents) {
     return false;
   }
 
-  bool are_contents_pdf =
-      chrome_pdf::features::IsOopifPdfEnabled()
-          ? !!extensions::mime_handler::MimeHandlerStreamManager::
-                 FromWebContents(contents)
-          : !!pdf_observer_;
-
-  if (!are_contents_pdf) {
-    return rfh == contents->GetPrimaryMainFrame();
-  }
-
-  content::RenderFrameHost* pdf_rfh =
-      chrome_pdf::features::IsOopifPdfEnabled()
-          ? pdf_frame_util::FindFullPagePdfExtensionHost(contents)
-          : pdf_frame_util::FindPdfChildFrame(contents->GetPrimaryMainFrame());
-  return pdf_rfh && rfh == pdf_rfh;
+  return rfh == contents->GetPrimaryMainFrame();
 }
 
 bool ReadAnythingUntrustedPageHandler::AreActionsAllowedInTree(
@@ -856,14 +821,7 @@ bool ReadAnythingUntrustedPageHandler::AreActionsAllowedInTree(
     return false;
   }
 
-  content::WebContents* contents = GetWebContents();
-  bool are_contents_pdf =
-      chrome_pdf::features::IsOopifPdfEnabled()
-          ? !!extensions::mime_handler::MimeHandlerStreamManager::
-                 FromWebContents(contents)
-          : !!pdf_observer_;
-
-  return are_contents_pdf || rfh->GetLastCommittedURL().SchemeIsHTTPOrHTTPS();
+  return rfh->GetLastCommittedURL().SchemeIsHTTPOrHTTPS();
 }
 
 void ReadAnythingUntrustedPageHandler::OnLineSpaceChange(
@@ -1506,17 +1464,6 @@ void ReadAnythingUntrustedPageHandler::OnTabWillDetach(
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// screen_ai::ScreenAIInstallState::Observer:
-///////////////////////////////////////////////////////////////////////////////
-
-void ReadAnythingUntrustedPageHandler::OnScreenAIServiceInitialized(
-    bool successful) {
-  if (successful) {
-    page_->ScreenAIServiceReady();
-  }
-}
-
 void ReadAnythingUntrustedPageHandler::SetUpPdfObserver() {
 #if BUILDFLAG(ENABLE_PDF)
   pdf_observer_.reset();
@@ -1680,8 +1627,8 @@ bool ReadAnythingUntrustedPageHandler::RequestDomDistillerDistillation(
     return false;
   }
 
-  // Don't attempt Readability distillation in automated tests. This is to prevent internal
-  // scripts from leaking.
+  // Don't attempt Readability distillation in automated tests. This is to
+  // prevent internal scripts from leaking.
   if (base::CommandLine::ForCurrentProcess()->HasSwitch(
           switches::kEnableAutomation)) {
     page_->OnReadabilityDistillationStateChanged(

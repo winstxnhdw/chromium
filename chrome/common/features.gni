@@ -43,7 +43,7 @@ declare_args() {
       is_win || is_mac || is_linux || is_chromeos
 
   # Enables support for background apps.
-  enable_background_contents = !is_android
+  enable_background_contents = !is_android && enable_platform_apps
   enable_background_mode = !is_android && !is_chromeos
 
   # Enables usage of notifications via Chrome's MessageCenter.

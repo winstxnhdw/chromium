@@ -8,6 +8,7 @@ import("//components/safe_browsing/buildflags.gni")
 import("//extensions/buildflags/buildflags.gni")
 import("//media/media_options.gni")
 import("//net/features.gni")
+import("//services/screen_ai/buildflags/features.gni")
 import("//third_party/blink/public/public_features.gni")
 import("//third_party/widevine/cdm/widevine.gni")
 
@@ -71,7 +72,7 @@ source_set("component_updater") {
     ]
   }
 
-  if (!is_android && !is_chromeos) {
+  if (!is_android && !is_chromeos && enable_screen_ai_service) {
     public += [ "screen_ai_component_installer.h" ]
   }
 
@@ -187,6 +188,7 @@ source_set("impl") {
     "//media",
     "//services/cert_verifier/public/mojom",
     "//services/network/public/cpp",
+    "//services/screen_ai/buildflags",
   ]
 
   if (safe_browsing_mode == 2) {
@@ -227,7 +229,7 @@ source_set("impl") {
     ]
   }
 
-  if (!is_android && !is_chromeos) {
+  if (!is_android && !is_chromeos && enable_screen_ai_service) {
     sources += [ "screen_ai_component_installer.cc" ]
     deps += [
       "//chrome/browser/screen_ai:screen_ai_install_state",

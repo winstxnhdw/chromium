@@ -4,6 +4,7 @@
 
 import("//build/config/cast.gni")
 import("//build/config/python.gni")
+import("//components/on_device_translation/buildflags/features.gni")
 import("//media/media_options.gni")
 import("//services/device/public/cpp/compute_pressure/buildflags.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
@@ -422,8 +423,6 @@ source_set("unit_tests") {
     "ai/language_model_test.cc",
     "ai/language_model_tool_types_test.cc",
     "ai/model_execution_responder_test.cc",
-    "ai/on_device_translation/language_detector_test.cc",
-    "ai/on_device_translation/translator_test.cc",
     "ai/proofreader_test.cc",
     "ai/semantic_embedder_test.cc",
     "animationworklet/animation_worklet_global_scope_test.cc",
@@ -690,6 +689,13 @@ source_set("unit_tests") {
     "xr/xr_test_utils.cc",
     "xr/xr_view_test.cc",
   ]
+
+  if (enable_on_device_translation) {
+    sources += [
+      "ai/on_device_translation/language_detector_test.cc",
+      "ai/on_device_translation/translator_test.cc",
+    ]
+  }
 
   if (enable_compute_pressure) {
     sources += [

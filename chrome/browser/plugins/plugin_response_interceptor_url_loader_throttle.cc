@@ -195,30 +195,6 @@ void PluginResponseInterceptorURLLoaderThrottle::WillProcessResponse(
 
   std::string extension_id;
   std::optional<MimeHandlerStreamManager::CachedFallbackBody> cached_body;
-  if (response_head->mime_type == pdf::kPDFMimeType) {
-    // A generic MIME handler extension called
-    // chrome.mimeHandler.abortAndFallbackToNativeHandler() on a prior
-    // navigation for this embedder frame. Peek (not consume) at the fallback
-    // mark so the aborted extension does not re-claim its own response on
-    // reload -- the mark is cleared in `DidFinishNavigation()` once the
-    // re-fetch settles. Route the application/pdf response to the user agent's
-    // built-in PDF viewer. When the prior stream buffered the response body,
-    // take it now and replay it below instead of re-reading the reload's
-    // network body. The cached body is consumable only by the OOPIF PDF stream
-    // pipeline; the legacy MimeHandlerView GuestView path has no hook for a
-    // pre-fetched body pipe, so leave the pipe parked and let the reload
-    // re-fetch from the network.
-    auto* stream_manager =
-        MimeHandlerStreamManager::FromWebContents(web_contents);
-    if (stream_manager && stream_manager->IsPendingNativeFallback(
-                              frame_tree_node_id_, response_url)) {
-      extension_id = extension_misc::kPdfExtensionId;
-      if (chrome_pdf::features::IsOopifPdfEnabled()) {
-        cached_body = stream_manager->TakeCachedFallbackBody(
-            frame_tree_node_id_, response_url);
-      }
-    }
-  }
 
   if (extension_id.empty()) {
     extension_id = PluginUtils::GetExtensionIdForMimeType(
@@ -398,28 +374,7 @@ void PluginResponseInterceptorURLLoaderThrottle::WillProcessResponse(
   } else {
     transferrable_loader->url_loader = std::move(original_loader);
     transferrable_loader->url_loader_client = std::move(original_client);
-    // Buffer the response body in memory while forwarding the bytes to
-    // the handler, so a later
-    // chrome.mimeHandler.abortAndFallbackToNativeHandler() call can hand
-    // the cached bytes back on reload and skip re-reading the body from
-    // the network pipe. The cache is only consumable when the reload
-    // routes to the OOPIF PDF stream pipeline -- the legacy
-    // MimeHandlerView GuestView path has no hook for a pre-fetched body
-    // pipe, and the throttle's fallback-take path is PDF-mime-only. So
-    // gate creation on generic-handler + application/pdf + OOPIF; for
-    // every other generic-handler response, skip the cost. On
-    // forwarding-pipe creation failure the original source handle is
-    // returned via `forwarding_pipe`, so the body is never lost.
-    if (is_for_generic_mime_handler &&
-        original_mime_type == pdf::kPDFMimeType &&
-        chrome_pdf::features::IsOopifPdfEnabled()) {
-      mojo::ScopedDataPipeConsumerHandle forwarding_pipe;
-      body_cache = extensions::MimeHandlerBodyCache::Create(
-          std::move(consumer_handle), &forwarding_pipe);
-      transferrable_loader->body = std::move(forwarding_pipe);
-    } else {
-      transferrable_loader->body = std::move(consumer_handle);
-    }
+    transferrable_loader->body = std::move(consumer_handle);
   }
 
   content::GetUIThreadTaskRunner({})->PostTask(

@@ -176,8 +176,11 @@ source_set("impl") {
     deps += [ "//chrome/browser/ui/webui/extensions_zero_state_promo" ]
   }
 
-  if (enable_pdf_ink2) {
-    deps += [ "//chrome/browser/pdf" ]
+  if (enable_pdf) {
+    deps += [
+      "//chrome/browser/pdf",
+      "//components/pdf/browser",
+    ]
   }
 }
 

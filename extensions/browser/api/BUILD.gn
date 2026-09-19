@@ -60,13 +60,9 @@ group("api_implementations") {
   if (enable_extensions) {
     public_deps += [
       "//extensions/browser:browser_sources",
-      "//extensions/browser/api/app_current_window_internal",
-      "//extensions/browser/api/app_runtime",
-      "//extensions/browser/api/app_window",
       "//extensions/browser/api/audio",
       "//extensions/browser/api/automation_internal",
       "//extensions/browser/api/feedback_private",
-      "//extensions/browser/api/file_system",
       "//extensions/browser/api/mime_handler",
       "//extensions/browser/api/mime_handler_private",
       "//extensions/browser/api/networking_private",
@@ -79,6 +75,15 @@ group("api_implementations") {
       "//extensions/browser/api/system_info",
       "//extensions/browser/api/system_storage",
     ]
+
+    if (enable_platform_apps) {
+      public_deps += [
+        "//extensions/browser/api/app_current_window_internal",
+        "//extensions/browser/api/app_runtime",
+        "//extensions/browser/api/app_window",
+        "//extensions/browser/api/file_system",
+      ]
+    }
 
     if (is_chromeos) {
       public_deps += [

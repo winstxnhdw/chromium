@@ -7,6 +7,7 @@ assert(is_win || is_mac || is_linux || is_chromeos)
 import("//build/config/compiler/compiler.gni")
 import("//chrome/common/features.gni")
 import("//extensions/buildflags/buildflags.gni")
+import("//pdf/features.gni")
 import("//testing/test.gni")
 
 source_set("prefs") {
@@ -122,8 +123,12 @@ source_set("impl") {
     "//components/language/core/browser",
     "//components/language/core/common",
     "//components/page_load_metrics/browser",
+    "//pdf:buildflags",
     "//services/metrics/public/cpp:metrics_cpp",
   ]
+  if (enable_pdf) {
+    deps += [ "//components/pdf/browser" ]
+  }
 }
 
 source_set("browser_tests") {
@@ -143,7 +148,6 @@ source_set("browser_tests") {
     "//base/test:test_support",
     "//chrome/browser",
     "//chrome/browser/optimization_guide:test_support",
-    "//chrome/browser/pdf:pdf_extension_test_utils",
     "//chrome/browser/search_engines",
     "//chrome/browser/ui",
     "//chrome/browser/ui:ui_features",
@@ -167,6 +171,9 @@ source_set("browser_tests") {
     "//testing/gtest",
     "//ui/views",
   ]
+  if (enable_pdf) {
+    deps += [ "//chrome/browser/pdf:pdf_extension_test_utils" ]
+  }
 }
 
 source_set("interactive_ui_tests") {

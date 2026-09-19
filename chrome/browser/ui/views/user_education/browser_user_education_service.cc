@@ -112,7 +112,6 @@
 #include "components/feature_engagement/public/event_constants.h"
 #include "components/feature_engagement/public/feature_constants.h"
 #include "components/lens/lens_features.h"
-#include "components/pdf/browser/pdf_document_helper.h"
 #include "components/safe_browsing/core/common/safebrowsing_referral_methods.h"
 #include "components/saved_tab_groups/public/features.h"
 #include "components/send_tab_to_self/features.h"
@@ -172,10 +171,6 @@
 #if BUILDFLAG(ENABLE_EXTENSIONS_CORE)
 #include "chrome/browser/ui/webui/extensions_zero_state_promo/zero_state_promo_ui.h"
 #endif  // BUILDFLAG(ENABLE_EXTENSIONS_CORE)
-
-#if BUILDFLAG(ENABLE_PDF_INK2)
-#include "chrome/browser/pdf/pdf_help_bubble_handler_factory.h"
-#endif
 
 namespace {
 
@@ -1040,82 +1035,6 @@ void MaybeRegisterChromeFeaturePromos(
           .SetBubbleArrow(HelpBubbleArrow::kBottomRight)
           .SetBubbleIcon(kLightbulbOutlineIcon)
           .SetBubbleTitleText(IDS_PASSWORD_MANAGER_IPH_CREATE_SHORTCUT_TITLE)));
-
-  // kIPHPdfGlicSummarizeFeature:
-  registry.RegisterFeature(std::move(
-      FeaturePromoSpecification::CreateForToastPromo(
-          feature_engagement::kIPHPdfGlicSummarizeFeature,
-          pdf::PdfHelpBubbleHandlerFactory::kPdfGlicSummarizeElementId,
-          IDS_PDF_GLIC_SUMMARIZE_IPH_TEXT_NEW,
-          IDS_PDF_GLIC_SUMMARIZE_IPH_TEXT_NEW_SCREENREADER,
-          FeaturePromoSpecification::AcceleratorInfo())
-          .SetPromoSubtype(
-              FeaturePromoSpecification::PromoSubtype::kLegalNotice)
-          .SetBubbleTitleText(IDS_PDF_GLIC_SUMMARIZE_IPH_TITLE)
-          .SetBubbleIcon(&vector_icons::kChatSparkIcon)
-          .SetBubbleArrow(HelpBubbleArrow::kTopLeft)
-          .SetInAnyContext(true)
-          .SetMetadata(151, "cuianthony@chromium.org",
-                       "Triggered when the PDF Viewer loads with the "
-                       "Summarize button.")));
-
-#if BUILDFLAG(ENABLE_PDF_INK2)
-  // kIPHPdfInkSignaturesFeature:
-  registry.RegisterFeature(std::move(
-      FeaturePromoSpecification::CreateForSnoozePromo(
-          feature_engagement::kIPHPdfInkSignaturesFeature,
-          pdf::PdfHelpBubbleHandlerFactory::kPdfInkSignaturesDrawElementId,
-          IDS_PDF_INK_SIGNATURES_IPH_BODY)
-          .SetBubbleArrow(HelpBubbleArrow::kTopRight)
-          .SetInAnyContext(true)
-          .SetMetadata(138, "thestig@chromium.org",
-                       "Triggered when the PDF Viewer opens.")));
-  // kIPHPdfTextAnnotationsFeature:
-  registry.RegisterFeature(std::move(
-      FeaturePromoSpecification::CreateForSnoozePromo(
-          feature_engagement::kIPHPdfTextAnnotationsFeature,
-          pdf::PdfHelpBubbleHandlerFactory::kPdfInkSignaturesAddTextElementId,
-          IDS_PDF_TEXT_ANNOTATIONS_IPH_BODY)
-          .SetBubbleArrow(HelpBubbleArrow::kTopRight)
-          .SetInAnyContext(true)
-          .SetMetadata(151, "thestig@chromium.org",
-                       "Triggered when the PDF Viewer opens.")));
-#endif  // BUILDFLAG(ENABLE_PDF_INK2)
-
-  // kIPHPdfSearchifyFeature:
-  registry.RegisterFeature(std::move(
-      FeaturePromoSpecification::CreateForToastPromo(
-          feature_engagement::kIPHPdfSearchifyFeature,
-          kBrowserDialogAnchorElementId, IDS_PDF_SEARCHIFY_IPH_BODY,
-          IDS_PDF_SEARCHIFY_IPH_BODY_SCREEN_READER,
-          FeaturePromoSpecification::AcceleratorInfo())
-          .SetBubbleArrow(HelpBubbleArrow::kNone)
-          .SetBubbleTitleText(IDS_PDF_SEARCHIFY_IPH_TITLE)
-          .SetMetadata(132, "rhalavati@chromium.org",
-                       "Triggered once when user opens a PDF which gets OCRed.")
-          .SetAnchorElementFilter(base::BindRepeating(
-              [](const ui::ElementTracker::ElementList& elements)
-                  -> ui::TrackedElement* {
-                if (elements.empty()) {
-                  return nullptr;
-                }
-                // Ensure a searchified PDF is visible before showing the IPH.
-                auto* const browser_view =
-                    views::ElementTrackerViews::GetInstance()
-                        ->GetFirstMatchingViewAs<BrowserView>(
-                            kBrowserViewElementId, elements[0]->context());
-                std::vector<ContentsWebView*> contents_web_views =
-                    browser_view->GetAllVisibleContentsWebViews();
-                for (auto* contents_web_view : contents_web_views) {
-                  auto* pdf_doc_helper =
-                      pdf::PDFDocumentHelper::MaybeGetForWebContents(
-                          *contents_web_view->GetWebContents());
-                  if (pdf_doc_helper && pdf_doc_helper->SearchifyStarted()) {
-                    return elements[0];
-                  }
-                }
-                return nullptr;
-              }))));
 
   // kIPHLensOverlayFeature:
   registry.RegisterFeature(std::move(

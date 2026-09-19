@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # On Device Translation is still not supported on other platforms.
-  # TODO(crbug.com/364795294): Support other platforms.
-  enable_on_device_translation = is_mac || is_win || is_linux || is_chromeos
+  # On-device translation and the web Translation API are excluded by default.
+  enable_on_device_translation = false
 }

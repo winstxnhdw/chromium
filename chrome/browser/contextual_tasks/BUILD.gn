@@ -469,7 +469,6 @@ source_set("ui_impl") {
       "location_bar_stub.cc",
     ]
     deps += [
-      "//chrome/browser/pdf",
       "//chrome/browser/resources/contextual_tasks:resources",
       "//chrome/browser/resources/webui_toolbar_shared:resources",
       "//chrome/browser/tab_list",
@@ -495,6 +494,9 @@ source_set("ui_impl") {
       "//ui/views/controls/webview",
       "//url",
     ]
+    if (enable_pdf) {
+      deps += [ "//chrome/browser/pdf" ]
+    }
   }
 
   if (enable_dice_support) {

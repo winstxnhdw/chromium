@@ -32,7 +32,6 @@ if (!is_android) {
       "//chrome/browser:browser_process",
       "//chrome/browser/content_settings",
       "//chrome/browser/content_settings:content_settings_factory",
-      "//chrome/browser/pdf:test_mime_handler_stream_manager",
       "//chrome/browser/preloading:test_support",
       "//chrome/browser/profiles:profile",
       "//chrome/browser/task_manager:test_support",
@@ -58,6 +57,9 @@ if (!is_android) {
       "//third_party/blink/public/common",
       "//ui/base",
     ]
+    if (enable_pdf) {
+      deps += [ "//chrome/browser/pdf:test_mime_handler_stream_manager" ]
+    }
 
     if (enable_pdf) {
       deps += [

@@ -149,13 +149,12 @@
 #include "chrome/browser/ui/webui/app_settings/web_app_settings_ui.h"
 // The intro mojom targets exist on ChromeOS but these headers are only
 // compiled on Win/Mac/Linux; gn check is static, so suppress it on ChromeOS.
-#include "chrome/browser/ui/webui/intro/finish_or_continue.mojom.h" // nogncheck
+#include "chrome/browser/ui/webui/intro/finish_or_continue.mojom.h"  // nogncheck
 #include "chrome/browser/ui/webui/intro/intro.mojom.h"  // nogncheck
 #include "chrome/browser/ui/webui/intro/intro_ui.h"
 #include "chrome/browser/ui/webui/intro/sign_in_celebration.mojom.h"  // nogncheck
 #include "chrome/browser/ui/webui/intro/sign_in_promo.mojom.h"  // nogncheck
-#include "chrome/browser/ui/webui/intro/welcome.mojom.h"  // nogncheck
-#include "chrome/browser/ui/webui/on_device_translation_internals/on_device_translation_internals_ui.h"
+#include "chrome/browser/ui/webui/intro/welcome.mojom.h"        // nogncheck
 #include "chrome/browser/ui/webui/signin/history_sync_optin/history_sync_optin.mojom.h"
 #include "chrome/browser/ui/webui/signin/history_sync_optin/history_sync_optin_ui.h"
 #include "chrome/browser/ui/webui/signin/profile_customization_ui.h"
@@ -502,9 +501,10 @@ void PopulateChromeWebUIFrameBindersPartsDesktop(
   // registry.ForWebUI() pattern used in
   // PopulateChromeWebUIFrameInterfaceBrokersUntrustedPartsDesktop below which
   // eliminates the need to account for feature flag combinations.
-  RegisterWebUIControllerInterfaceBinder<
-      composebox::mojom::PageHandlerFactory, NewTabPageUI, ContextualTasksUI,
-      OmniboxPopupUI, OmniboxEverywhereUI>(map);
+  RegisterWebUIControllerInterfaceBinder<composebox::mojom::PageHandlerFactory,
+                                         NewTabPageUI, ContextualTasksUI,
+                                         OmniboxPopupUI, OmniboxEverywhereUI>(
+      map);
 
   if (base::FeatureList::IsEnabled(
           omnibox::kComposeboxDriveContextMenuOption)) {
@@ -519,10 +519,6 @@ void PopulateChromeWebUIFrameBindersPartsDesktop(
 #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
   RegisterWebUIControllerInterfaceBinder<
       app_management::mojom::PageHandlerFactory, WebAppSettingsUI>(map);
-
-  RegisterWebUIControllerInterfaceBinder<
-      on_device_translation_internals::mojom::PageHandlerFactory,
-      OnDeviceTranslationInternalsUI>(map);
 
   if (syncer::IsReplaceSyncPromosWithSignInPromosEnabled()) {
     RegisterWebUIControllerInterfaceBinder<

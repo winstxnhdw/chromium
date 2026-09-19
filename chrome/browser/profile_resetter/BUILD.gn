@@ -84,7 +84,6 @@ if (!is_android) {
       "//components/prefs",
       "//components/proxy_config",
       "//components/search_engines",
-      "//components/spellcheck/browser",
       "//components/strings",
       "//components/version_info",
       "//content/public/browser",

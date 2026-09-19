@@ -6,6 +6,7 @@ import("//components/enterprise/buildflags/buildflags.gni")
 import("//components/on_device_translation/buildflags/features.gni")
 import("//components/safe_browsing/buildflags.gni")
 import("//components/signin/features.gni")
+import("//components/spellcheck/spellcheck_build_features.gni")
 import("//content/browser/devtools/features.gni")
 import("//extensions/buildflags/buildflags.gni")
 import("//pdf/features.gni")
@@ -1274,7 +1275,6 @@ source_set("impl") {
     "//chrome/browser/profiles",
     "//chrome/browser/profiles:policy_handlers",
     "//chrome/browser/search",
-    "//chrome/browser/spellchecker",
     "//chrome/browser/ssl",
     "//chrome/browser/ui/side_search",
     "//chrome/browser/ui/toolbar/chrome_labs",
@@ -1324,12 +1324,18 @@ source_set("impl") {
     "//components/skills/internal",
     "//components/skills/public",
     "//components/spellcheck:buildflags",
-    "//components/spellcheck/browser",
     "//components/unified_consent",
     "//components/user_manager",
     "//components/variations/service",
     "//services/device/public/cpp:device_features",
   ]
+
+  if (enable_spellcheck) {
+    deps += [
+      "//chrome/browser/spellchecker",
+      "//components/spellcheck/browser",
+    ]
+  }
 
   if (enable_extensions_core) {
     sources += [

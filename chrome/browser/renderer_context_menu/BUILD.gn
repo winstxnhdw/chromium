@@ -45,6 +45,7 @@ source_set("renderer_context_menu") {
       "//components/custom_handlers",
       "//components/lens:buildflags",
       "//components/renderer_context_menu",
+      "//components/spellcheck:buildflags",
       "//components/supervised_user/core/browser",
       "//content/public/browser",
       "//content/public/common:buildflags",
@@ -94,7 +95,6 @@ source_set("impl") {
       "accessibility_labels_menu_observer.h",
       "dictation_menu_observer.h",
       "link_to_text_menu_observer.h",
-      "spelling_menu_observer.h",
     ]
 
     sources += [
@@ -107,9 +107,16 @@ source_set("impl") {
       "dictation_menu_observer.cc",
       "link_to_text_menu_observer.cc",
       "render_view_context_menu.cc",
-      "spelling_bubble_model.cc",
-      "spelling_menu_observer.cc",
     ]
+
+    if (use_browser_spellchecker || use_renderer_spellchecker ||
+        enable_spelling_service) {
+      public += [ "spelling_menu_observer.h" ]
+      sources += [
+        "spelling_bubble_model.cc",
+        "spelling_menu_observer.cc",
+      ]
+    }
 
     deps += [
       "//chrome/app:command_ids",
@@ -119,7 +126,6 @@ source_set("impl") {
       "//chrome/browser:browser_public_dependencies",
       "//chrome/browser/accessibility",
       "//chrome/browser/apps/app_service",
-      "//chrome/browser/apps/platform_apps",
       "//chrome/browser/autocomplete",
       "//chrome/browser/compose",
       "//chrome/browser/context_hub",
@@ -135,7 +141,6 @@ source_set("impl") {
       "//chrome/browser/lens/region_search",
       "//chrome/browser/media/router:media_router_feature",
       "//chrome/browser/password_manager",
-      "//chrome/browser/pdf",
       "//chrome/browser/predictors",
       "//chrome/browser/prefs",
       "//chrome/browser/preloading:prefs",
@@ -146,7 +151,6 @@ source_set("impl") {
       "//chrome/browser/search_engines",
       "//chrome/browser/send_tab_to_self",
       "//chrome/browser/sharing_hub",
-      "//chrome/browser/spellchecker",
       "//chrome/browser/sync",
       "//chrome/browser/translate",
       "//chrome/browser/ui",
@@ -182,7 +186,6 @@ source_set("impl") {
       "//components/pdf/common:util",
       "//components/prefs",
       "//components/shared_highlighting/core/common",
-      "//components/spellcheck/browser",
       "//components/user_prefs",
       "//mojo/public/cpp/bindings",
       "//pdf:features",
@@ -196,6 +199,18 @@ source_set("impl") {
 
     if (enable_print_preview) {
       deps += [ "//chrome/browser/printing" ]
+    }
+
+    if (enable_pdf) {
+      deps += [ "//chrome/browser/pdf" ]
+    }
+
+    if (enable_spellcheck) {
+      deps += [ "//chrome/browser/spellchecker" ]
+    }
+
+    if (enable_platform_apps) {
+      deps += [ "//chrome/browser/apps/platform_apps" ]
     }
   }
 
@@ -221,7 +236,7 @@ source_set("impl") {
     ]
   }
 
-  if (is_linux || is_chromeos || is_win) {
+  if (use_renderer_spellchecker && (is_linux || is_chromeos || is_win)) {
     public += [ "spelling_options_submenu_observer.h" ]
     sources += [ "spelling_options_submenu_observer.cc" ]
   }
@@ -234,7 +249,7 @@ source_set("impl") {
     ]
   }
 
-  if (enable_extensions) {
+  if (enable_platform_apps) {
     sources += [
       "context_menu_content_type_app_mode.cc",
       "context_menu_content_type_app_mode.h",
@@ -377,8 +392,6 @@ if (!is_android) {
       "accessibility_labels_bubble_model_browsertest.cc",
       "accessibility_labels_menu_observer_browsertest.cc",
       "render_view_context_menu_browsertest.cc",
-      "spelling_bubble_model_browsertest.cc",
-      "spelling_menu_observer_browsertest.cc",
     ]
 
     deps = [
@@ -392,11 +405,9 @@ if (!is_android) {
       "//chrome/browser/context_hub",
       "//chrome/browser/devtools",
       "//chrome/browser/enterprise/data_controls:test_support",
-      "//chrome/browser/pdf:pdf_extension_test_utils",
       "//chrome/browser/profiles:misc",
       "//chrome/browser/search_engines",
       "//chrome/browser/send_tab_to_self",
-      "//chrome/browser/spellchecker",
       "//chrome/browser/sync",
       "//chrome/browser/ui:browser_window_header",
       "//chrome/browser/ui:ui_features",
@@ -418,7 +429,6 @@ if (!is_android) {
       "//components/send_tab_to_self",
       "//components/send_tab_to_self:features",
       "//components/send_tab_to_self:test_support",
-      "//components/spellcheck/browser",
       "//content/public/browser",
       "//content/test:test_support",
       "//pdf:features",
@@ -428,7 +438,18 @@ if (!is_android) {
       "//url",
     ]
 
-    if (is_linux || is_chromeos || is_win) {
+    if (enable_spellcheck) {
+      sources += [
+        "spelling_bubble_model_browsertest.cc",
+        "spelling_menu_observer_browsertest.cc",
+      ]
+      deps += [
+        "//chrome/browser/spellchecker",
+        "//components/spellcheck/browser",
+      ]
+    }
+
+    if (enable_spellcheck && (is_linux || is_chromeos || is_win)) {
       sources += [
         # This test is for the spelling options submenu that's only for
         # Windows, ChromeOS, and Linux.
@@ -444,7 +465,10 @@ if (!is_android) {
     }
 
     if (enable_pdf) {
-      deps += [ "//chrome/browser/pdf:pdf_extension_test_base" ]
+      deps += [
+        "//chrome/browser/pdf:pdf_extension_test_base",
+        "//chrome/browser/pdf:pdf_extension_test_utils",
+      ]
     }
   }
 

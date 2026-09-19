@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//components/on_device_translation/buildflags/features.gni")
 import("//services/device/public/cpp/compute_pressure/buildflags.gni")
 import("//third_party/blink/renderer/config.gni")
 
@@ -27,8 +28,6 @@ static_idl_files_in_modules = [
   "//third_party/blink/renderer/modules/ai/language_model.idl",
   "//third_party/blink/renderer/modules/ai/language_model_create_options.idl",
   "//third_party/blink/renderer/modules/ai/language_model_params.idl",
-  "//third_party/blink/renderer/modules/ai/on_device_translation/language_detector.idl",
-  "//third_party/blink/renderer/modules/ai/on_device_translation/translator.idl",
   "//third_party/blink/renderer/modules/ai/proofreader.idl",
   "//third_party/blink/renderer/modules/ai/rewriter.idl",
   "//third_party/blink/renderer/modules/ai/summarizer.idl",
@@ -1313,6 +1312,13 @@ static_idl_files_in_modules = [
   "//third_party/blink/renderer/modules/xr/xr_webgl_layer_init.idl",
   "//third_party/blink/renderer/modules/xr/xr_webgl_sub_image.idl",
 ]
+
+if (enable_on_device_translation) {
+  static_idl_files_in_modules += [
+    "//third_party/blink/renderer/modules/ai/on_device_translation/language_detector.idl",
+    "//third_party/blink/renderer/modules/ai/on_device_translation/translator.idl",
+  ]
+}
 
 # Direct Sockets
 # This uses target_os rather than current_os (which is what is_android is set

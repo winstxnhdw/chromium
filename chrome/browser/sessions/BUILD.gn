@@ -83,10 +83,11 @@ source_set("impl") {
   ]
 
   if (enable_extensions) {
-    deps += [
-      "//chrome/browser/apps/app_service",
-      "//chrome/browser/apps/platform_apps",
-    ]
+    deps += [ "//chrome/browser/apps/app_service" ]
+  }
+
+  if (enable_platform_apps) {
+    deps += [ "//chrome/browser/apps/platform_apps" ]
   }
 
   if (is_android) {

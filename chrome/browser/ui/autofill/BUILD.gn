@@ -7,6 +7,7 @@ import("//build/config/ui.gni")
 import("//components/compose/features.gni")
 import("//components/safe_browsing/buildflags.gni")
 import("//components/signin/features.gni")
+import("//extensions/buildflags/buildflags.gni")
 
 if (is_android) {
   import("//build/config/android/rules.gni")
@@ -303,7 +304,6 @@ source_set("impl") {
     deps += [
       "//chrome/app:command_ids",
       "//chrome/app/vector_icons",
-      "//chrome/browser/apps/platform_apps",
       "//chrome/browser/desktop_to_mobile_promos:utils",
       "//chrome/browser/feedback",
       "//chrome/browser/profiles:profile_manager",
@@ -326,6 +326,9 @@ source_set("impl") {
       "//components/tabs:public",
       "//extensions/browser",
     ]
+    if (enable_platform_apps) {
+      deps += [ "//chrome/browser/apps/platform_apps" ]
+    }
   }
 
   if (is_mac) {

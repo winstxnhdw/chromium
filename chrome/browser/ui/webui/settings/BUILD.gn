@@ -5,6 +5,7 @@
 import("//build/config/ozone.gni")
 import("//build/config/ui.gni")
 import("//components/signin/features.gni")
+import("//services/screen_ai/buildflags/features.gni")
 
 assert(is_win || is_mac || is_linux || is_chromeos)
 
@@ -62,7 +63,6 @@ source_set("settings") {
     "//chrome/browser/permissions/system",
     "//chrome/browser/profile_resetter",
     "//chrome/browser/profiles:profile",
-    "//chrome/browser/screen_ai:screen_ai_install_state",
     "//chrome/browser/themes",
     "//chrome/browser/ui/safety_hub",
     "//chrome/browser/ui/search_engines",
@@ -98,6 +98,10 @@ source_set("settings") {
     "//ui/shell_dialogs",
     "//url",
   ]
+
+  if (enable_screen_ai_service) {
+    public_deps += [ "//chrome/browser/screen_ai:screen_ai_install_state" ]
+  }
 
   if (enable_dice_support || is_chromeos) {
     public_deps +=
@@ -678,9 +682,11 @@ if (!is_android) {
       ]
       deps += [
         "//chrome/browser/profiles",
-        "//chrome/browser/screen_ai:screen_ai_install_state",
         "//ui/accessibility",
       ]
+      if (enable_screen_ai_service) {
+        deps += [ "//chrome/browser/screen_ai:screen_ai_install_state" ]
+      }
     }
 
     if (is_chrome_branded) {

@@ -285,10 +285,8 @@ source_set("impl") {
     deps += [
       ":extension_enable_flow_delegate",
       ":extension_popup_types",
-      "//apps",
       "//chrome/browser/app_mode",
       "//chrome/browser/apps/app_service",
-      "//chrome/browser/apps/platform_apps",
       "//chrome/browser/extensions",
       "//chrome/browser/favicon",
       "//chrome/browser/infobars",
@@ -310,6 +308,12 @@ source_set("impl") {
       "//components/services/app_service",
       "//components/signin/public/base:signin_switches",
     ]
+    if (enable_platform_apps) {
+      deps += [
+        "//apps",
+        "//chrome/browser/apps/platform_apps",
+      ]
+    }
   }
   public_deps = [ "//chrome/browser:browser_public_dependencies" ]
 

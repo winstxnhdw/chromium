@@ -36,13 +36,7 @@
 #include "components/tabs/public/tab_interface.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/common/content_switches.h"
-#include "pdf/buildflags.h"
 #include "ui/accessibility/accessibility_features.h"
-
-#if BUILDFLAG(ENABLE_PDF)
-#include "base/strings/string_util.h"
-#include "components/pdf/browser/pdf_document_helper.h"
-#endif  // BUILDFLAG(ENABLE_PDF)
 
 namespace {
 
@@ -85,65 +79,6 @@ void LogDecision(ReadAnythingOmniboxChipDecision decision) {
   base::UmaHistogramEnumeration(kOmniboxDecisionHistogram, decision);
 }
 
-#if BUILDFLAG(ENABLE_PDF)
-size_t g_min_pdf_text_length_for_omnibox = 1100;
-constexpr float kMaxNonAlphaFraction = 0.33;
-
-bool IsMostlyAlphaChars(const std::u16string& text) {
-  size_t non_alpha_chars =
-      std::ranges::count_if(text, [](char16_t c) {
-        // Check specifically for certain non-alphabetic characters rather than
-        // for alphabetic characters. IsAsciiAlpha is only true for certain
-        // scripts, so this avoids excluding other languages.
-        return base::IsAsciiPunctuation(c) || base::IsAsciiDigit(c) ||
-               base::IsWhitespace(c) || base::IsUnicodeControl(c);
-      });
-
-  return (static_cast<float>(non_alpha_chars) / text.size()) <
-         kMaxNonAlphaFraction;
-}
-
-void OnPdfTextReceived(base::OnceCallback<void(bool)> result_callback,
-                       const std::u16string& text) {
-  // Show the omnibox on PDFs above a certain length, with a high percentage of
-  // alphabetic characters. In this case, it is likely going to distill well in
-  // Reading mode.
-  bool long_enough = text.size() > g_min_pdf_text_length_for_omnibox;
-  bool should_show = long_enough && IsMostlyAlphaChars(text);
-  std::move(result_callback).Run(should_show);
-
-  ReadAnythingOmniboxChipDecision decision;
-  if (should_show) {
-    decision = ReadAnythingOmniboxChipDecision::kShowPdf;
-  } else if (!long_enough) {
-    decision = ReadAnythingOmniboxChipDecision::kHideShortPdf;
-  } else {
-    decision = ReadAnythingOmniboxChipDecision::kHideLowAlphabeticPdf;
-  }
-  LogDecision(decision);
-}
-
-void RunPdfDistillableHeuristic(
-    pdf::PDFDocumentHelper* pdf_helper,
-    base::OnceCallback<void(bool)> result_callback) {
-  CHECK(pdf_helper);
-
-  // Use the text on the first page of the document to estimate if this could
-  // be a distillable PDF.
-  pdf_helper->GetPageText(
-      /*page_index=*/0,
-      base::BindOnce(&OnPdfTextReceived, std::move(result_callback)));
-}
-#endif
-
-pdf::PDFDocumentHelper* GetPdf(content::WebContents& contents) {
-#if BUILDFLAG(ENABLE_PDF)
-  return pdf::PDFDocumentHelper::MaybeGetForWebContents(contents);
-#else
-  return nullptr;
-#endif
-}
-
 void OnReadabilityDecision(base::OnceCallback<void(bool)> result_callback,
                            bool should_show) {
   std::move(result_callback).Run(should_show);
@@ -169,13 +104,6 @@ void OnOptimizationGuideDecision(
   content::WebContents* contents = contents_weak.get();
   if (!contents) {
     std::move(result_callback).Run(false);
-    return;
-  }
-
-  // This check is already done in CheckIfShouldSuggestReadingMode but it's
-  // possible that the page was not detected as a PDF yet so check again.
-  if (auto* pdf_helper = GetPdf(*contents)) {
-    RunPdfDistillableHeuristic(pdf_helper, std::move(result_callback));
     return;
   }
 
@@ -215,11 +143,6 @@ static int check_count_;
 }  // namespace
 
 namespace read_anything {
-
-base::AutoReset<size_t>
-ReadAnythingEntryPointController::SetMinPdfTextLengthForTesting(size_t length) {
-  return {&g_min_pdf_text_length_for_omnibox, length};
-}
 
 // static
 void ReadAnythingEntryPointController::InvokePageAction(
@@ -424,15 +347,8 @@ void ReadAnythingEntryPointController::CheckIfShouldSuggestReadingMode(
 
   check_count_++;
 
-  // If this page is a PDF, then other heuristics will always return false.
-  // But since PDFs are distilled via Screen2x, use a custom heuristic to
-  // determine if the PDF will distill well with RM.
-  content::WebContents* contents = bwi->GetActiveTabInterface()->GetContents();
-  if (auto* pdf_helper = GetPdf(*contents)) {
-    RunPdfDistillableHeuristic(pdf_helper, std::move(result_callback));
-    return;
-  }
-
+  content::WebContents* contents =
+      bwi->GetActiveTabInterface()->GetContents();
   auto* optimization_guide_decider =
       OptimizationGuideKeyedServiceFactory::GetForProfile(bwi->GetProfile());
   // If there is no optimization guide, cut straight to using Readability
