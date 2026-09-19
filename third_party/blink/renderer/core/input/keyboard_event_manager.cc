@@ -12,17 +12,14 @@
 #include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/mojom/frame/user_activation_notification_type.mojom-blink.h"
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink.h"
-#include "third_party/blink/public/mojom/manifest/display_mode.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/dom/events/simulated_click_options.h"
 #include "third_party/blink/renderer/core/dom/focus_params.h"
-#include "third_party/blink/renderer/core/editing/editing_utilities.h"
 #include "third_party/blink/renderer/core/editing/editor.h"
 #include "third_party/blink/renderer/core/events/keyboard_event.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
-#include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/html/forms/html_input_element.h"
 #include "third_party/blink/renderer/core/html/html_dialog_element.h"
 #include "third_party/blink/renderer/core/input/event_handling_util.h"
@@ -36,7 +33,6 @@
 #include "third_party/blink/renderer/core/page/spatial_navigation.h"
 #include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
 #include "third_party/blink/renderer/platform/keyboard_codes.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "third_party/blink/renderer/platform/windows_keyboard_codes.h"
 #include "ui/events/keycodes/dom/keycode_converter.h"
 
@@ -259,59 +255,11 @@ WebInputEventResult KeyboardEventManager::KeyEvent(
         frame_, mojom::blink::UserActivationNotificationType::kInteraction);
   }
 
-  // Don't expose key events to pages while browsing on the drive-by web. This
-  // is to prevent pages from accidentally interfering with the built-in
-  // behavior eg. spatial-navigation. Installed PWAs are a signal from the user
-  // that they trust the app more than a random page on the drive-by web so we
-  // allow PWAs to receive and override key events. The only exception is the
-  // browser display mode since it must always behave like the the drive-by web.
-  bool should_send_key_events_to_js =
-      !frame_->GetSettings()->GetDontSendKeyEventsToJavascript();
-
-  if (!should_send_key_events_to_js &&
-      frame_->GetDocument()->IsInWebAppScope()) {
-    mojom::blink::DisplayMode display_mode =
-        frame_->GetWidgetForLocalRoot()->DisplayMode();
-    should_send_key_events_to_js =
-        display_mode == mojom::blink::DisplayMode::kMinimalUi ||
-        display_mode == mojom::blink::DisplayMode::kStandalone ||
-        display_mode == mojom::blink::DisplayMode::kFullscreen ||
-        display_mode == mojom::blink::DisplayMode::kUnframed ||
-        display_mode == mojom::blink::DisplayMode::kWindowControlsOverlay;
-  }
-
-  // We have 2 level of not exposing key event to js, not send and send but not
-  // cancellable.
-  bool send_key_event = true;
-  bool event_cancellable = true;
-
-  if (!should_send_key_events_to_js) {
-    // TODO(bokan) Should cleanup these magic number. https://crbug.com/949766.
-    const int kDomKeysDontSend[] = {0x00200309, 0x00200310};
-    const int kDomKeysNotCancellabelUnlessInEditor[] = {0x00400031, 0x00400032,
-                                                        0x00400033};
-    for (uint32_t dom_key : kDomKeysDontSend) {
-      if (initial_key_event.dom_key == dom_key)
-        send_key_event = false;
-    }
-
-    for (uint32_t dom_key : kDomKeysNotCancellabelUnlessInEditor) {
-      auto* text_control = ToTextControlOrNull(node);
-      auto* element = DynamicTo<Element>(node);
-      bool is_editable =
-          IsEditable(*node) ||
-          (text_control && !text_control->IsDisabledOrReadOnly()) ||
-          (element &&
-           EqualIgnoringAsciiCase(
-               element->FastGetAttribute(html_names::kRoleAttr), "textbox"));
-      if (initial_key_event.dom_key == dom_key && !is_editable)
-        event_cancellable = false;
-    }
-  } else {
-    // TODO(bokan) Should cleanup these magic numbers. https://crbug.com/949766.
-    const int kDomKeyNeverSend = 0x00200309;
-    send_key_event = initial_key_event.dom_key != kDomKeyNeverSend;
-  }
+  // Keep trusted keyboard events in Blink's dispatch pipeline so native
+  // editing and default handlers still run, but stop them before they reach
+  // DOM listeners in page JavaScript.
+  const bool send_key_event = false;
+  const bool event_cancellable = true;
 
   DispatchEventResult dispatch_result = DispatchEventResult::kNotCanceled;
   switch (initial_key_event.GetType()) {
