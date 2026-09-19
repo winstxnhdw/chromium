@@ -458,25 +458,21 @@ TEST_F(FocusControllerTest, PageFocusPreservesWasLastFocusFromUserGesture) {
   EXPECT_TRUE(target->WasLastFocusFromUserGesture());
 }
 
-TEST_F(FocusControllerTest, FocusCanBeEmulated) {
+TEST_F(FocusControllerTest, FocusIsAlwaysEmulated) {
   SetBodyInnerHTML("<div id=host></div>");
   auto& controller = GetFocusController();
   controller.SetFocused(false);
-  EXPECT_FALSE(controller.IsDocumentFocused(GetDocument()));
-
-  controller.SetFocusEmulationEnabled(true);
   EXPECT_TRUE(controller.IsDocumentFocused(GetDocument()));
 }
 
-TEST_F(FocusControllerTest, FocusIsRestoredAfterEmulation) {
+TEST_F(FocusControllerTest, FocusEmulationCannotBeDisabled) {
   SetBodyInnerHTML("<div id=host></div>");
   auto& controller = GetFocusController();
   controller.SetFocused(false);
-  controller.SetFocusEmulationEnabled(true);
   EXPECT_TRUE(controller.IsDocumentFocused(GetDocument()));
 
   controller.SetFocusEmulationEnabled(false);
-  EXPECT_FALSE(controller.IsDocumentFocused(GetDocument()));
+  EXPECT_TRUE(controller.IsDocumentFocused(GetDocument()));
 }
 
 TEST_F(FocusControllerTest, FocusIsRestoredAfterNavigation) {
