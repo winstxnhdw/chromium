@@ -2707,10 +2707,11 @@ TEST_F(EventHandlerSimTest, LargeCustomHiDpiSvgCursorIsRejected) {
   EXPECT_EQ(ui::mojom::blink::CursorType::kPointer, cursor.type());
 }
 
-TEST_F(EventHandlerSimTest, KeyboardEventsAreNotExposedInWebApps) {
+TEST_F(EventHandlerSimTest, NeverExposeKeyboardEvent) {
   WebView().MainFrameViewWidget()->Resize(gfx::Size(800, 600));
   SimRequest request("https://example.com/test.html", "text/html");
   LoadURL("https://example.com/test.html");
+  GetDocument().GetSettings()->SetDontSendKeyEventsToJavascript(true);
   GetDocument().GetSettings()->SetScrollAnimatorEnabled(false);
   GetDocument().GetSettings()->SetWebAppScope(GetDocument().Url());
   WebView().MainFrameImpl()->LocalRootFrameWidget()->SetDisplayMode(
@@ -2735,10 +2736,6 @@ TEST_F(EventHandlerSimTest, KeyboardEventsAreNotExposedInWebApps) {
         let log = document.getElementById('log');
         log.innerText = 'keyup cancelable=' + e.cancelable;
       });
-      document.addEventListener('keypress', (e) => {
-        let log = document.getElementById('log');
-        log.innerText = 'keypress cancelable=' + e.cancelable;
-      });
     </script>
   )HTML");
   Compositor().BeginFrame();
@@ -2757,10 +2754,6 @@ TEST_F(EventHandlerSimTest, KeyboardEventsAreNotExposedInWebApps) {
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
   EXPECT_EQ("no event", element.InnerHTML().Utf8());
 
-  e.SetType(WebInputEvent::Type::kChar);
-  GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
-  EXPECT_EQ("no event", element.InnerHTML().Utf8());
-
   e.SetType(WebInputEvent::Type::kKeyDown);
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
   EXPECT_EQ("no event", element.InnerHTML().Utf8());
@@ -2772,22 +2765,23 @@ TEST_F(EventHandlerSimTest, KeyboardEventsAreNotExposedInWebApps) {
   // TODO(crbug.com/949766) Should cleanup these magic number.
   e.dom_key = 0x00200310;
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
-  EXPECT_EQ("no event", element.InnerHTML().Utf8());
+  EXPECT_NE("no event", element.InnerHTML().Utf8());
 
   e.SetType(WebInputEvent::Type::kKeyUp);
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
-  EXPECT_EQ("no event", element.InnerHTML().Utf8());
+  EXPECT_NE("no event", element.InnerHTML().Utf8());
 
   e.SetType(WebInputEvent::Type::kKeyDown);
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
-  EXPECT_EQ("no event", element.InnerHTML().Utf8());
+  EXPECT_NE("no event", element.InnerHTML().Utf8());
 
   e.SetType(WebInputEvent::Type::kKeyUp);
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
-  EXPECT_EQ("no event", element.InnerHTML().Utf8());
+  EXPECT_NE("no event", element.InnerHTML().Utf8());
 }
 
-TEST_F(EventHandlerSimTest, KeyboardEventsAreNotExposedToJavascript) {
+TEST_F(EventHandlerSimTest, NotExposeKeyboardEvent) {
+  GetDocument().GetSettings()->SetDontSendKeyEventsToJavascript(true);
   GetDocument().GetSettings()->SetScrollAnimatorEnabled(false);
   WebView().MainFrameViewWidget()->Resize(gfx::Size(800, 600));
   SimRequest request("https://example.com/test.html", "text/html");
@@ -2812,10 +2806,6 @@ TEST_F(EventHandlerSimTest, KeyboardEventsAreNotExposedToJavascript) {
         let log = document.getElementById('log');
         log.innerText = 'keyup cancelable=' + e.cancelable;
       });
-      document.addEventListener('keypress', (e) => {
-        let log = document.getElementById('log');
-        log.innerText = 'keypress cancelable=' + e.cancelable;
-      });
     </script>
   )HTML");
   Compositor().BeginFrame();
@@ -2842,18 +2832,17 @@ TEST_F(EventHandlerSimTest, KeyboardEventsAreNotExposedToJavascript) {
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
   EXPECT_EQ("no event", element.InnerHTML().Utf8());
 
-  // Other navigation keys are also not sent to JavaScript.
+  // Key send to js but not cancellable.
   e.dom_key = 0x00400031;
   e.SetType(WebInputEvent::Type::kRawKeyDown);
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
-  EXPECT_EQ("no event", element.InnerHTML().Utf8());
+  EXPECT_EQ("keydown cancelable=false", element.InnerHTML().Utf8());
 
   e.SetType(WebInputEvent::Type::kKeyUp);
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
-  EXPECT_EQ("no event", element.InnerHTML().Utf8());
+  EXPECT_EQ("keyup cancelable=false", element.InnerHTML().Utf8());
 
-  // Editable controls keep their native default handling without exposing the
-  // key event to JavaScript.
+  // Key send to js and cancellable in editor.
   WebElement input = GetDocument().getElementById(AtomicString("input1"));
   GetDocument().SetFocusedElement(
       input.Unwrap<Element>(),
@@ -2862,7 +2851,7 @@ TEST_F(EventHandlerSimTest, KeyboardEventsAreNotExposedToJavascript) {
 
   e.SetType(WebInputEvent::Type::kRawKeyDown);
   GetDocument().GetFrame()->GetEventHandler().KeyEvent(e);
-  EXPECT_EQ("no event", element.InnerHTML().Utf8());
+  EXPECT_EQ("keydown cancelable=true", element.InnerHTML().Utf8());
 
   // Arrow key caused scroll down in post event dispatch process. Ensure page
   // scrolled.
