@@ -618,6 +618,9 @@ WebViewImpl::WebViewImpl(
   CoreInitializer::GetInstance().ProvideModulesToPage(
       *page_, session_storage_namespace_id_);
 
+  if (!prerender_param) {
+    visibility = mojom::blink::PageVisibilityState::kVisible;
+  }
   SetVisibilityState(visibility, /*is_initial_state=*/true);
   if (prerender_param) {
     page_->SetIsPrerendering(true);
@@ -2572,6 +2575,15 @@ void WebViewImpl::SetPageLifecycleStateInternal(
   if (!page) {
     return;
   }
+
+  // Keep live pages foregrounded regardless of the browser window or tab
+  // state. Prerendered and back-forward cached pages must retain their real
+  // lifecycle state until they are activated or restored.
+  if (!page->IsPrerendering() && !new_state->is_in_back_forward_cache) {
+    new_state->visibility = mojom::blink::PageVisibilityState::kVisible;
+    new_state->is_frozen = false;
+  }
+
   auto& old_state = page->GetPageLifecycleState();
   TRACE_EVENT2("navigation", "WebViewImpl::SetPageLifecycleStateInternal",
                "old_state", old_state, "new_state", new_state);

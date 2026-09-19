@@ -1757,7 +1757,17 @@ FocusController::FocusController(Page* page)
       is_active_(false),
       is_focused_(false),
       is_changing_focused_frame_(false),
-      is_emulating_focus_(false) {}
+      // Keep web-exposed page focus active even when the browser window or tab
+      // loses focus.
+      is_emulating_focus_(true) {}
+
+bool FocusController::IsActive() const {
+  return !page_->IsPrerendering() && (is_active_ || is_emulating_focus_);
+}
+
+bool FocusController::IsFocused() const {
+  return !page_->IsPrerendering() && (is_focused_ || is_emulating_focus_);
+}
 
 // static
 const ContainerNode* FocusController::ReadingFlowContainerOrDisplayContents(
@@ -1991,24 +2001,9 @@ void FocusController::SetFocused(bool focused) {
   }
 }
 
-void FocusController::SetFocusEmulationEnabled(bool emulate_focus) {
-  if (emulate_focus == is_emulating_focus_)
-    return;
-  bool active = IsActive();
-  bool focused = IsFocused();
-  is_emulating_focus_ = emulate_focus;
-
-  if (!page_->MainFrame() || !page_->MainFrame()->IsLocalFrame()) {
-    // If the page has no local main frame, no need to update focus, as the
-    // focus emulation will trigger when the page navigated to a local main
-    // frame (through `UpdateFocusOnNavigationCommit()`).
-    return;
-  }
-
-  if (active != IsActive())
-    ActiveHasChanged();
-  if (focused != IsFocused())
-    FocusHasChanged();
+void FocusController::SetFocusEmulationEnabled(bool) {
+  // Focus emulation is permanently enabled so pages cannot observe browser or
+  // tab focus loss.
 }
 
 void FocusController::UpdateFocusOnNavigationCommit(Frame* frame,

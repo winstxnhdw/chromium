@@ -119,10 +119,10 @@ class CORE_EXPORT FocusController final
   bool SetFocusedElement(Element*, Frame*);
 
   void SetActive(bool);
-  bool IsActive() const { return is_active_ || is_emulating_focus_; }
+  bool IsActive() const;
 
   void SetFocused(bool);
-  bool IsFocused() const { return is_focused_ || is_emulating_focus_; }
+  bool IsFocused() const;
 
   void SetFocusEmulationEnabled(bool);
 
