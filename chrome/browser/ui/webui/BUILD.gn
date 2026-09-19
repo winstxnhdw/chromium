@@ -6,6 +6,7 @@ import("//chrome/common/features.gni")
 import("//chrome/test/include_js_tests.gni")
 import("//chromeos/dbus/config/use_real_dbus_clients.gni")
 import("//components/enterprise/buildflags/buildflags.gni")
+import("//components/on_device_translation/buildflags/features.gni")
 import("//components/safe_browsing/buildflags.gni")
 import("//components/signin/features.gni")
 import("//content/browser/devtools/features.gni")
@@ -99,6 +100,7 @@ source_set("configs") {
     "//chrome/browser/ui/webui/version",
     "//components/lens:buildflags",
     "//components/notebooks/internals/webui",
+    "//components/on_device_translation/buildflags",
     "//components/webui/user_actions",
     "//skia",
     "//third_party/abseil-cpp:absl",
@@ -220,9 +222,12 @@ source_set("configs") {
   if (is_win || is_mac || is_linux) {
     deps += [
       "//chrome/browser/ui/webui/browser_switch",
-      "//chrome/browser/ui/webui/on_device_translation_internals",
       "//chrome/browser/ui/webui/updater",
     ]
+  }
+
+  if (enable_on_device_translation) {
+    deps += [ "//chrome/browser/ui/webui/on_device_translation_internals" ]
   }
 
   if (is_win) {
@@ -959,10 +964,10 @@ if (!is_android) {
 
     if (is_win || is_mac || is_linux) {
       sources += [ "profile_helper_browsertest.cc" ]
-      deps += [
-        ":profile_helper",
-        "//chrome/browser/apps/platform_apps",
-      ]
+      deps += [ ":profile_helper" ]
+      if (enable_platform_apps) {
+        deps += [ "//chrome/browser/apps/platform_apps" ]
+      }
     }
 
     if (include_js_tests) {

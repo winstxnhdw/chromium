@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//components/captive_portal/core/features.gni")
+import("//extensions/buildflags/buildflags.gni")
 
 if (enable_captive_portal_detection) {
   source_set("captive_portal") {
@@ -28,7 +29,6 @@ if (enable_captive_portal_detection) {
       "//base/test:test_support",
       "//chrome/browser:browser_process",
       "//chrome/browser/apps/app_service",
-      "//chrome/browser/apps/platform_apps:browser_test_support",
       "//chrome/browser/extensions:test_support",
       "//chrome/browser/profiles:profile",
       "//chrome/browser/ui:browser_window_header",
@@ -58,5 +58,8 @@ if (enable_captive_portal_detection) {
       "//services/network/public/mojom:url_loader_base",
       "//testing/gtest",
     ]
+    if (enable_platform_apps) {
+      deps += [ "//chrome/browser/apps/platform_apps:browser_test_support" ]
+    }
   }
 }

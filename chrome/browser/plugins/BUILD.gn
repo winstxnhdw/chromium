@@ -98,12 +98,15 @@ source_set("impl") {
       "//extensions/browser/mime_handler:stream_container",
       "//extensions/common",
       "//mojo/public/cpp/bindings",
-      "//pdf:features",
       "//services/metrics/public/cpp:ukm_builders",
       "//services/service_manager/public/cpp",
       "//ui/base",
       "//url",
     ]
+
+    if (enable_pdf) {
+      deps += [ "//pdf:features" ]
+    }
   }
 
   if (enable_plugins || is_android) {

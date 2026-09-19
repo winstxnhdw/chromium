@@ -4,6 +4,7 @@
 
 import("//components/enterprise/buildflags/buildflags.gni")
 import("//extensions/buildflags/buildflags.gni")
+import("//printing/buildflags/buildflags.gni")
 import("//ui/base/ui_features.gni")
 
 # This library wraps //ui/views and can only be built where views is available.
@@ -51,7 +52,8 @@ source_set("unit_tests") {
     deps += [ "//components/enterprise/connectors/core:cloud_content_scanning" ]
   }
 
-  if (enable_extensions && enterprise_local_content_analysis) {
+  if (enable_extensions && enterprise_local_content_analysis &&
+      enable_printing) {
     sources += [ "print_utils_unittest.cc" ]
     deps += [ "//chrome/browser/printing:test_support" ]
   }

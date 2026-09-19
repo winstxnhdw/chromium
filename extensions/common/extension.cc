@@ -619,6 +619,14 @@ Extension::~Extension() {
 bool Extension::Init(std::u16string* error) {
   DCHECK(error);
 
+  // Platform apps are intentionally unsupported in this build. Their
+  // implementation targets remain in the link graph only because desktop
+  // Chrome still has unconditional references to some shared symbols.
+  if (manifest_->is_platform_app()) {
+    *error = u"Platform apps are disabled in this build.";
+    return false;
+  }
+
   // Check for |converted_from_user_script| first, since it affects the type
   // returned by GetType(). This is needed to determine if the manifest version
   // is valid.

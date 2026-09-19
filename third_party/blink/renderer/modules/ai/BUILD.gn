@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//components/on_device_translation/buildflags/features.gni")
 import("//third_party/blink/renderer/modules/modules.gni")
 
 blink_modules_sources("ai") {
@@ -42,13 +43,6 @@ blink_modules_sources("ai") {
     "language_model_tool_success.h",
     "model_execution_responder.cc",
     "model_execution_responder.h",
-    "on_device_translation/create_translator_client.cc",
-    "on_device_translation/create_translator_client.h",
-    "on_device_translation/language_detector.cc",
-    "on_device_translation/language_detector.h",
-    "on_device_translation/resolver_with_abort_signal.h",
-    "on_device_translation/translator.cc",
-    "on_device_translation/translator.h",
     "proofreader.cc",
     "proofreader.h",
     "rewriter.cc",
@@ -60,6 +54,18 @@ blink_modules_sources("ai") {
     "writer.cc",
     "writer.h",
   ]
+
+  if (enable_on_device_translation) {
+    sources += [
+      "on_device_translation/create_translator_client.cc",
+      "on_device_translation/create_translator_client.h",
+      "on_device_translation/language_detector.cc",
+      "on_device_translation/language_detector.h",
+      "on_device_translation/resolver_with_abort_signal.h",
+      "on_device_translation/translator.cc",
+      "on_device_translation/translator.h",
+    ]
+  }
 
   public_deps = [ "//third_party/blink/public/mojom:mojom_modules_blink" ]
 

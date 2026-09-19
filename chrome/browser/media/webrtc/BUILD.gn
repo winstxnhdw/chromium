@@ -9,6 +9,7 @@ import("//build/config/ui.gni")
 import("//chrome/common/features.gni")
 import("//components/enterprise/buildflags/buildflags.gni")
 import("//content/public/common/features.gni")
+import("//extensions/buildflags/buildflags.gni")
 import("//third_party/webrtc/webrtc.gni")
 
 source_set("media_stream_ui") {
@@ -438,7 +439,6 @@ if (!is_android) {
       ":webrtc_browser_tests_base",
       "//base",
       "//chrome/browser:test_support",
-      "//chrome/browser/apps/platform_apps:browser_test_support",
       "//chrome/browser/extensions:test_support",
       "//chrome/browser/extensions/api/desktop_capture",
       "//chrome/browser/infobars:test_support",
@@ -459,6 +459,9 @@ if (!is_android) {
       "//net:test_support",
       "//testing/gtest",
     ]
+    if (enable_platform_apps) {
+      deps += [ "//chrome/browser/apps/platform_apps:browser_test_support" ]
+    }
 
     if (is_chromeos) {
       sources += [

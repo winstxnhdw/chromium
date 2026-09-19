@@ -52,22 +52,6 @@ bool IsIgnored(const ui::AXNode* const ax_node, bool is_pdf) {
   // text node but keep the `kContentInfo` so a line break can be inserted in
   // between pages during `a11y::GetHtmlTagForPDF()`.
   const ax::mojom::Role role = ax_node->GetRole();
-  if (is_pdf) {
-    // The text content of the aforementioned `kBanner` or `kContentInfo` node
-    // is the same as the text content of its child static text node.
-    const ui::AXNode* const parent = ax_node->GetParent();
-    if (const std::string_view text = ax_node->GetTextContentUTF8();
-        text == l10n_util::GetStringUTF8(IDS_PDF_OCR_RESULT_BEGIN)) {
-      if (role == ax::mojom::Role::kBanner ||
-          (parent && parent->GetRole() == ax::mojom::Role::kBanner)) {
-        return true;
-      }
-    } else if (text == l10n_util::GetStringUTF8(IDS_PDF_OCR_RESULT_END) &&
-               parent && parent->GetRole() == ax::mojom::Role::kContentInfo) {
-      return true;
-    }
-  }
-
   // Ignore interactive elements, except for text fields and aria-related
   // support fields.
   return (ui::IsControl(role) && !ui::IsTextField(role)) || ui::IsSelect(role);
@@ -136,10 +120,6 @@ std::string GetHtmlTagForPDF(const ui::AXNode* ax_node,
     // Add a line break after each page of an inaccessible PDF for readability
     // since there is no other formatting included in the OCR output.
     case ax::mojom::Role::kContentInfo:
-      if (ax_node->GetTextContentUTF8() ==
-          l10n_util::GetStringUTF8(IDS_PDF_OCR_RESULT_END)) {
-        return "br";
-      }
       [[fallthrough]];
     default:
       return html_tag.empty() ? "span" : html_tag;
@@ -222,7 +202,6 @@ std::u16string GetTextContent(const ui::AXNode* ax_node,
   if (is_pdf && !features::IsPdfAccessibilityHeuristicEnhancementsEnabled()) {
     std::u16string filtered_string(ax_node->GetTextContentUTF16());
     if (filtered_string.size() > 0) {
-
       // When we receive text from a pdf node, there are return characters at
       // each visual line break in the page. If these aren't filtered, one of
       // two things could happen: 1) part of the same sentence will be read as

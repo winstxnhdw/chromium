@@ -10,8 +10,6 @@
 #include "ui/base/base_window.h"
 #include "ui/base/mojom/window_show_state.mojom-forward.h"
 
-static_assert(BUILDFLAG(ENABLE_PLATFORM_APPS));
-
 namespace extensions {
 
 class AppWindow;

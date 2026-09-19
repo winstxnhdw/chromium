@@ -156,6 +156,7 @@ source_set("global_features") {
     "//base",
     "//build:branding_buildflags",
     "//chrome/common/request_header_integrity:buildflags",
+    "//components/on_device_translation/buildflags",
   ]
 }
 
@@ -1040,7 +1041,6 @@ source_set("core") {
     "//chrome/browser/site_protection:utils",
     "//chrome/browser/site_token_provider",
     "//chrome/browser/speech",
-    "//chrome/browser/spellchecker",
     "//chrome/browser/ssl",
     "//chrome/browser/status_icons",
     "//chrome/browser/subresource_filter",
@@ -1222,9 +1222,6 @@ source_set("core") {
     "//components/site_isolation",
     "//components/skills:features",
     "//components/spellcheck:buildflags",
-    "//components/spellcheck/browser",
-    "//components/spellcheck/common",
-    "//components/spellcheck/common:interfaces",
     "//components/startup_metric_utils",
     "//components/strike_database:features",
     "//components/subresource_filter/content/browser",
@@ -1327,10 +1324,12 @@ source_set("core") {
 
   if (enable_extensions) {
     deps += [
-      "//chrome/browser/apps/platform_apps",
       "//chrome/browser/controlled_frame",
       "//chrome/browser/ui/webui/extensions_zero_state_promo",
     ]
+    if (enable_platform_apps) {
+      deps += [ "//chrome/browser/apps/platform_apps" ]
+    }
   }
 
   if (is_win || is_mac || is_linux) {
@@ -1338,7 +1337,6 @@ source_set("core") {
       "//chrome/browser/browser_switcher",
       "//chrome/browser/ui/startup/default_browser_prompt",
       "//chrome/browser/ui/webui/app_settings",
-      "//chrome/browser/ui/webui/on_device_translation_internals",
       "//chrome/browser/ui/webui/updater",
     ]
   }
@@ -1350,7 +1348,6 @@ source_set("core") {
       "//chrome/browser/headless:headless_extra_parts",
       "//chrome/browser/indigo/onboarding",
       "//chrome/browser/media/router/discovery/access_code:access_code_sink_service",
-      "//chrome/browser/printing",
       "//chrome/browser/record_replay:impl",
       "//chrome/browser/sensor",
       "//chrome/browser/sharing_hub",
@@ -1413,8 +1410,17 @@ source_set("core") {
   if (enable_on_device_translation) {
     deps += [
       "//chrome/browser/on_device_translation",
+      "//chrome/browser/ui/webui/on_device_translation_internals",
       "//components/on_device_translation",
       "//components/on_device_translation:features",
+    ]
+  }
+
+  if (enable_spellcheck) {
+    deps += [
+      "//components/spellcheck/browser",
+      "//components/spellcheck/common",
+      "//components/spellcheck/common:interfaces",
     ]
   }
 
@@ -2582,7 +2588,6 @@ source_set("browser") {
       "//chrome/browser/profile_resetter:impl",
       "//chrome/browser/record_replay",
       "//chrome/browser/record_replay:impl",
-      "//chrome/browser/screen_ai:screen_ai_service_router_factory",
       "//chrome/browser/sharing_hub",
       "//chrome/browser/sharing_hub:impl",
       "//chrome/browser/smart_card",
@@ -3123,7 +3128,6 @@ source_set("browser") {
     deps += [
       "//chrome/browser/browser_switcher",
       "//chrome/browser/browser_switcher:impl",
-      "//chrome/browser/ui/webui/on_device_translation_internals",
       "//chrome/browser/ui/webui/updater",
     ]
   }
@@ -3229,21 +3233,25 @@ source_set("browser") {
   }
 
   if (enable_extensions) {
-    public_deps += [
-      "//chrome/browser/apps/platform_apps",
-      "//chrome/browser/apps/platform_apps/api",
-      "//chrome/browser/controlled_frame",
-    ]
+    public_deps += [ "//chrome/browser/controlled_frame" ]
 
     deps += [
-      "//apps",
       "//chrome/browser/clipboard:impl",
       "//chrome/browser/controlled_frame:media_access_handler_impl",
-      "//chrome/browser/sync_file_system",
       "//chrome/browser/ui/web_applications",
       "//chrome/browser/web_applications/extensions",
       "//components/drive",
     ]
+    if (enable_platform_apps) {
+      public_deps += [
+        "//chrome/browser/apps/platform_apps",
+        "//chrome/browser/apps/platform_apps/api",
+      ]
+      deps += [
+        "//apps",
+        "//chrome/browser/sync_file_system",
+      ]
+    }
     deps += [
       # TODO(crbug.com/41410773): mirroring shouldn't depend on
       # enable_extensions.
@@ -3278,7 +3286,10 @@ source_set("browser") {
     ]
   }
   if (enable_on_device_translation) {
-    deps += [ "//chrome/browser/on_device_translation" ]
+    deps += [
+      "//chrome/browser/on_device_translation",
+      "//chrome/browser/ui/webui/on_device_translation_internals",
+    ]
   }
 
   if (enable_pdf) {
@@ -3577,7 +3588,6 @@ group("browser_generated_files") {
       "//chrome/browser/profile_resetter:profile_reset_report_proto",
       "//chrome/browser/share/proto",
       "//chrome/browser/support_tool:support_tool_proto",
-      "//chrome/browser/sync_file_system/drive_backend:sync_file_system_drive_proto",
       "//chrome/browser/ui:webui_name_variants",
       "//chrome/browser/ui/views/drive_picker_host:mojo_bindings",
       "//chrome/browser/ui/webui/access_code_cast:mojo_bindings",
@@ -3612,6 +3622,9 @@ group("browser_generated_files") {
       "//components/browser_apis/tab_drag:mojom",
       "//components/browser_apis/tab_strip:mojom",
     ]
+    if (enable_platform_apps) {
+      public_deps += [ "//chrome/browser/sync_file_system/drive_backend:sync_file_system_drive_proto" ]
+    }
     if (!is_official_build) {
       public_deps +=
           [ "//chrome/browser/ui/webui/new_tab_page/foo:mojo_bindings" ]
@@ -3664,11 +3677,15 @@ group("browser_generated_files") {
   if (is_win || is_mac || is_linux) {
     public_deps += [
       "//chrome/browser/ui/webui/app_home:mojo_bindings",
-      "//chrome/browser/ui/webui/on_device_translation_internals:mojo_bindings",
       "//chrome/browser/ui/webui/whats_new:mojo_bindings",
       "//components/enterprise/device_trust/core/attestation/proto:attestation_ca_proto",
       "//components/enterprise/device_trust/core/attestation/proto:google_key_proto",
       "//components/enterprise/device_trust/core/attestation/proto:interface_proto",
+    ]
+  }
+  if (enable_on_device_translation) {
+    public_deps += [
+      "//chrome/browser/ui/webui/on_device_translation_internals:mojo_bindings",
     ]
   }
   if (is_win || is_mac || is_linux || is_chromeos) {

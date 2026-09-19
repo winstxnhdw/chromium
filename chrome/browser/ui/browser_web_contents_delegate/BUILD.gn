@@ -4,6 +4,7 @@
 
 import("//build/config/ozone.gni")
 import("//build/config/ui.gni")
+import("//printing/buildflags/buildflags.gni")
 
 if (!is_android) {
   source_set("browser_web_contents_delegate") {
@@ -39,10 +40,13 @@ if (!is_android) {
       "//components/headless/console_message_logger",
       "//components/javascript_dialogs",
       "//components/page_load_metrics/browser",
-      "//components/printing/browser",
       "//content/public/browser",
+      "//printing/buildflags",
       "//ui/base",
     ]
+    if (enable_printing) {
+      deps += [ "//components/printing/browser" ]
+    }
     if (use_aura) {
       deps += [ "//chrome/browser/ui:overscroll_pref_manager" ]
     }

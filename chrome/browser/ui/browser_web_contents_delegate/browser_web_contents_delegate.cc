@@ -70,7 +70,6 @@
 #include "components/page_load_metrics/browser/metrics_web_contents_observer.h"
 #include "components/paint_preview/browser/paint_preview_client.h"
 #include "components/permissions/permission_request_manager.h"
-#include "components/printing/browser/print_composite_client.h"
 #include "components/split_tabs/split_tab_id.h"
 #include "components/tabs/public/split_tab_data.h"
 #include "components/tabs/public/tab_interface.h"
@@ -1500,15 +1499,10 @@ void BrowserWebContentsDelegate::GetAIPageContent(
 }
 
 void BrowserWebContentsDelegate::PrintCrossProcessSubframe(
-    content::WebContents* web_contents,
-    const gfx::Rect& rect,
-    int document_cookie,
-    content::RenderFrameHost* subframe_host) const {
-  auto* client = printing::PrintCompositeClient::FromWebContents(web_contents);
-  if (client) {
-    client->PrintCrossProcessSubframe(rect, document_cookie, subframe_host);
-  }
-}
+    content::WebContents* /*web_contents*/,
+    const gfx::Rect& /*rect*/,
+    int /*document_cookie*/,
+    content::RenderFrameHost* /*subframe_host*/) const {}
 
 void BrowserWebContentsDelegate::CapturePaintPreviewOfSubframe(
     content::WebContents* web_contents,

@@ -65,7 +65,6 @@
 #include "chromeos/ash/components/network/network_state_handler.h"
 #include "components/language/core/browser/pref_names.h"
 #include "components/proxy_config/proxy_config_pref_names.h"
-#include "components/spellcheck/browser/pref_names.h"
 #endif  // BUILDFLAG(IS_CHROMEOS)
 
 #if BUILDFLAG(IS_WIN)
@@ -574,12 +573,6 @@ void ProfileResetter::ResetKeyboardInputSettings() {
         ash::prefs::kLanguagePreloadEngines,
         input_method_ids.empty() ? std::string() : input_method_ids[0]);
   }
-
-  // 2. Call to reset spell check languages, matching the default language and
-  // clearing the other options.
-  prefs->SetList(spellcheck::prefs::kSpellCheckDictionaries,
-                 base::ListValue().Append(
-                     prefs->GetString(language::prefs::kPreferredLanguages)));
 
   MarkAsDone(KEYBOARD_SETTINGS);
 }

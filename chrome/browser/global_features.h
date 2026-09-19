@@ -83,10 +83,6 @@ namespace local_network_access {
 class IPAddressSpaceOverridesPrefsObserver;
 }  // namespace local_network_access
 
-namespace on_device_translation {
-class OnDeviceTranslationInstaller;
-}
-
 #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
 namespace scheduled_restart {
 class ScheduledRestartBubbleController;
@@ -339,9 +335,6 @@ class GlobalFeatures {
 #endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
 #if !BUILDFLAG(IS_ANDROID)
-  std::unique_ptr<on_device_translation::OnDeviceTranslationInstaller>
-      on_device_translation_installer_;
-
   std::unique_ptr<ProfileLaunchObserver> profile_launch_observer_;
 
   std::unique_ptr<smart_restart::SmartRestartMetricsObserver>

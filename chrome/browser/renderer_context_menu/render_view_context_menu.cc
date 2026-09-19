@@ -95,7 +95,6 @@
 #include "chrome/browser/renderer_context_menu/context_menu_content_type_factory.h"
 #include "chrome/browser/renderer_context_menu/dictation_menu_observer.h"
 #include "chrome/browser/renderer_context_menu/link_to_text_menu_observer.h"
-#include "chrome/browser/renderer_context_menu/spelling_menu_observer.h"
 #include "chrome/browser/search/search.h"
 #include "chrome/browser/search_engines/template_url_service_factory.h"
 #include "chrome/browser/send_tab_to_self/send_tab_to_self_util.h"
@@ -206,8 +205,6 @@
 #include "components/services/app_service/public/cpp/app_launch_params.h"
 #include "components/services/app_service/public/cpp/app_launch_util.h"
 #include "components/sharing_message/features.h"
-#include "components/spellcheck/browser/pref_names.h"
-#include "components/spellcheck/browser/spellcheck_host_metrics.h"
 #include "components/spellcheck/common/spellcheck_common.h"
 #include "components/spellcheck/spellcheck_buildflags.h"
 #include "components/split_tabs/split_tab_visual_data.h"
@@ -295,10 +292,6 @@
 #include "components/webapps/isolated_web_apps/scheme.h"
 #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) ||
         // BUILDFLAG(IS_CHROMEOS)
-
-#if BUILDFLAG(USE_RENDERER_SPELLCHECKER)
-#include "chrome/browser/renderer_context_menu/spelling_options_submenu_observer.h"
-#endif
 
 #if BUILDFLAG(ENABLE_COMPOSE)
 #include "chrome/browser/compose/chrome_compose_client.h"
@@ -1455,15 +1448,9 @@ void RenderViewContextMenu::InitMenu() {
   }
 #endif  // !BUILDFLAG(IS_CHROMEOS)
 
-  // Spell check, language settings, and writing direction.
+  // Writing direction.
   if (editable && params_.misspelled_word.empty()) {
     menu_model_.AddSeparator(ui::NORMAL_SEPARATOR);
-
-    // Spell check and language settings are not supported by media plugins.
-    if (!content_type_->SupportsGroup(
-            ContextMenuContentType::ITEM_GROUP_MEDIA_PLUGIN)) {
-      AppendLanguageSettings();
-    }
 
     // Only append writing direction options if they are supported by
     // the focused element (HTML text fields or editable plugins).
@@ -2987,11 +2974,6 @@ void RenderViewContextMenu::AppendSearchProvider() {
 }
 
 void RenderViewContextMenu::AppendSpellingAndSearchSuggestionItems() {
-  const bool use_spelling = !IsRunningInForcedAppMode();
-  if (use_spelling) {
-    AppendSpellingSuggestionItems();
-  }
-
   if (!params_.misspelled_word.empty() &&
       !features::IsMenuSimplificationEnabled()) {
     bool show_glic = !params_.selection_text.empty();
@@ -3132,45 +3114,6 @@ void RenderViewContextMenu::AppendOtherEditableItems() {
   }
 
   menu_model_.AddSeparator(ui::NORMAL_SEPARATOR);
-}
-
-void RenderViewContextMenu::AppendLanguageSettings() {
-  if (features::IsMenuSimplificationEnabled() && IsPasswordField()) {
-    return;
-  }
-
-  const bool use_spelling = !IsRunningInForcedAppMode();
-  if (!use_spelling) {
-    return;
-  }
-
-#if BUILDFLAG(IS_MAC)
-  menu_model_.AddItemWithStringId(IDC_CONTENT_CONTEXT_LANGUAGE_SETTINGS,
-                                  IDS_CONTENT_CONTEXT_LANGUAGE_SETTINGS);
-#else
-  if (!spelling_options_submenu_observer_) {
-    const int kLanguageRadioGroup = 1;
-    spelling_options_submenu_observer_ =
-        std::make_unique<SpellingOptionsSubMenuObserver>(this, this,
-                                                         kLanguageRadioGroup);
-  }
-
-  spelling_options_submenu_observer_->InitMenu(params_);
-  observers_.AddObserver(spelling_options_submenu_observer_.get());
-#endif
-}
-
-void RenderViewContextMenu::AppendSpellingSuggestionItems() {
-  if (features::IsMenuSimplificationEnabled() && IsPasswordField()) {
-    return;
-  }
-
-  if (!spelling_suggestions_menu_observer_) {
-    spelling_suggestions_menu_observer_ =
-        std::make_unique<SpellingMenuObserver>(this);
-  }
-  observers_.AddObserver(spelling_suggestions_menu_observer_.get());
-  spelling_suggestions_menu_observer_->InitMenu(params_);
 }
 
 bool RenderViewContextMenu::AppendAccessibilityLabelsItems() {
@@ -3376,12 +3319,9 @@ bool RenderViewContextMenu::IsCommandIdEnabled(int id) const {
     return false;
   }
 
-  PrefService* prefs = GetPrefs(browser_context_);
-
-  // Allow Spell Check language items on sub menu for text area context menu.
   if ((id >= IDC_SPELLCHECK_LANGUAGES_FIRST) &&
       (id <= IDC_SPELLCHECK_LANGUAGES_LAST)) {
-    return prefs->GetBoolean(spellcheck::prefs::kSpellCheckEnable);
+    return false;
   }
 
   // Extension items.
@@ -3596,7 +3536,7 @@ bool RenderViewContextMenu::IsCommandIdEnabled(int id) const {
       return true;
 
     case IDC_CHECK_SPELLING_WHILE_TYPING:
-      return prefs->GetBoolean(spellcheck::prefs::kSpellCheckEnable);
+      return false;
 
 #if !BUILDFLAG(IS_MAC) && BUILDFLAG(IS_POSIX)
     // TODO(suzhe): this should not be enabled for password fields.
@@ -3605,13 +3545,15 @@ bool RenderViewContextMenu::IsCommandIdEnabled(int id) const {
 #endif
 
     case IDC_CONTENT_CONTEXT_VIDEO_FRAME:
-    case IDC_SPELLCHECK_MENU:
     case IDC_CONTENT_CONTEXT_OPENLINKWITH:
     case IDC_CONTENT_CONTEXT_PROTOCOL_HANDLER_SETTINGS:
     case IDC_CONTENT_CONTEXT_GENERATEPASSWORD:
     case IDC_CONTENT_CONTEXT_SHOWALLSAVEDPASSWORDS:
     case IDC_CONTENT_CONTEXT_USE_PASSKEY_FROM_ANOTHER_DEVICE:
       return true;
+
+    case IDC_SPELLCHECK_MENU:
+      return false;
 
     case IDC_ROUTE_MEDIA:
       return IsRouteMediaEnabled();
@@ -4577,19 +4519,7 @@ bool RenderViewContextMenu::IsPasteAndMatchStyleEnabled() const {
 }
 
 bool RenderViewContextMenu::IsPrintPreviewEnabled() const {
-  if (IsGlicWindow(this, browser_context_) &&
-      base::FeatureList::IsEnabled(features::kGlicPrintMenuItem)) {
-    return GetPrefs(browser_context_)->GetBoolean(prefs::kPrintingEnabled) &&
-           (source_web_contents_ && !source_web_contents_->IsCrashed());
-  }
-
-  if (params_.media_type != ContextMenuDataMediaType::kNone &&
-      !(params_.media_flags & ContextMenuData::kMediaCanPrint)) {
-    return false;
-  }
-
-  BrowserWindowInterface* browser = GetBrowser();
-  return browser && chrome::CanPrint(browser);
+  return false;
 }
 
 bool RenderViewContextMenu::IsQRCodeGeneratorEnabled() const {

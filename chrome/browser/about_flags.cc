@@ -11087,14 +11087,6 @@ const FeatureEntry kFeatureEntries[] = {
      kOsMac | kOsWin | kOsLinux,
      FEATURE_VALUE_TYPE(features::kGlicPrintMenuItem)},
 
-#if !BUILDFLAG(IS_ANDROID)
-    {"glic-pdf-summarize", flag_descriptions::kGlicPdfSummarizeName,
-     flag_descriptions::kGlicPdfSummarizeDescription, kOsDesktop,
-     FEATURE_WITH_PARAMS_VALUE_TYPE(features::kPdfGlicSummarize,
-                                    kPdfGlicSummarizeVariations,
-                                    "GlicPdfSummarize")},
-#endif
-
     {"glic-pre-warming", flag_descriptions::kGlicWarmingName,
      flag_descriptions::kGlicWarmingDescription, kOsDesktop,
      FEATURE_WITH_PARAMS_VALUE_TYPE(features::kGlicWarming,
@@ -11540,13 +11532,6 @@ const FeatureEntry kFeatureEntries[] = {
      FEATURE_VALUE_TYPE(
          enterprise::webstore::kChromeWebStoreNavigationThrottle)},
 #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
-    {"align-pdf-default-print-settings-with-html",
-     flag_descriptions::kAlignPdfDefaultPrintSettingsWithHTMLName,
-     flag_descriptions::kAlignPdfDefaultPrintSettingsWithHTMLDescription,
-     kOsAll,
-     FEATURE_VALUE_TYPE(
-         printing::features::kAlignPdfDefaultPrintSettingsWithHTML)},
-
 #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
     BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID)
     {"autofill-enable-amount-extraction-testing",

@@ -23,6 +23,7 @@ import("//components/optimization_guide/features.gni")
 import("//content/public/common/features.gni")
 import("//extensions/buildflags/buildflags.gni")
 import("//media/media_options.gni")
+import("//pdf/features.gni")
 import("//services/on_device_model/on_device_model.gni")
 import("//services/shape_detection/features.gni")
 import("//third_party/angle/gni/angle.gni")
@@ -1649,12 +1650,15 @@ group("dependencies") {
     "//components/variations/service",
     "//components/webui/about",
     "//content/public/child",
-    "//pdf",
     "//services/tracing/public/cpp",
     "//third_party/blink/public:blink_devtools_frontend_resources",
     "//third_party/blink/public:blink_devtools_inspector_resources",
     "//v8:v8_headers",
   ]
+
+  if (enable_pdf) {
+    public_deps += [ "//pdf" ]
+  }
 
   if (enable_printing) {
     public_deps += [ "//printing" ]

@@ -177,6 +177,10 @@
 namespace blink {
 
 namespace {
+
+constexpr int kReportedViewportWidth = 1920;
+constexpr int kReportedViewportHeight = 1080;
+
 bool IsRunningMicrotasks(ScriptState* script_state) {
   if (auto* microtask_queue = ToMicrotaskQueue(script_state)) {
     return microtask_queue->IsRunningMicrotasks();
@@ -1772,8 +1776,7 @@ int LocalDOMWindow::innerHeight() const {
     return 0;
   }
 
-  return AdjustForAbsoluteZoom::AdjustInt(GetViewportSize().height(),
-                                          GetFrame()->LayoutZoomFactor());
+  return kReportedViewportHeight;
 }
 
 int LocalDOMWindow::innerWidth() const {
@@ -1781,8 +1784,7 @@ int LocalDOMWindow::innerWidth() const {
     return 0;
   }
 
-  return AdjustForAbsoluteZoom::AdjustInt(GetViewportSize().width(),
-                                          GetFrame()->LayoutZoomFactor());
+  return kReportedViewportWidth;
 }
 
 int LocalDOMWindow::screenX() const {

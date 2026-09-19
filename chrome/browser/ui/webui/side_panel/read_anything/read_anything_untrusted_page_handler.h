@@ -49,7 +49,7 @@ using read_anything::mojom::ReadAnythingOpenTrigger;
 namespace content {
 class NavigationHandle;
 class ScopedAccessibilityMode;
-}
+}  // namespace content
 
 class ReadAnythingUntrustedPageHandler;
 
@@ -403,7 +403,6 @@ class ReadAnythingUntrustedPageHandler :
 
   bool HasTransientUserActivation() const;
 
-  void OnScreenAIServiceInitialized(bool successful);
 
   // Called to notify this instance that the dependency parser loader
   // is available for model requests or is invalidating existing requests
@@ -480,8 +479,6 @@ class ReadAnythingUntrustedPageHandler :
 
   // The current language being used in the app.
   std::string current_language_code_ = "en-US";
-  const bool use_screen_ai_service_;
-
 #if BUILDFLAG(IS_CHROMEOS)
   // The ChromeOS language pack manager can't handle more than one language
   // request at a time. When we receive requests from the page, queue them up
