@@ -206,6 +206,10 @@ unsigned WebGLRenderingContextBase::max_active_webgl_contexts_on_worker_ = 0;
 
 namespace {
 
+constexpr char kSpoofedWebGLVendor[] = "NVIDIA Corporation";
+constexpr char kSpoofedWebGLRenderer[] =
+    "ANGLE (NVIDIA, NVIDIA GeForce RTX 3090, OpenGL)";
+
 enum class WebGLANGLEImplementation {
   // These values are persisted to logs. Entries should not be renumbered and
   // numeric values should never be reused.
@@ -4216,8 +4220,7 @@ ScriptValue WebGLRenderingContextBase::getParameter(ScriptState* script_state,
       return ScriptValue::CreateNull(script_state->GetIsolate());
     case WebGLDebugRendererInfo::kUnmaskedRendererWebgl:
       if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
-        return WebGLAny(script_state,
-                        String(ContextGL()->GetString(GL_RENDERER)));
+        return WebGLAny(script_state, String(kSpoofedWebGLRenderer));
       }
       SynthesizeGLError(
           GL_INVALID_ENUM, "getParameter",
@@ -4225,8 +4228,7 @@ ScriptValue WebGLRenderingContextBase::getParameter(ScriptState* script_state,
       return ScriptValue::CreateNull(script_state->GetIsolate());
     case WebGLDebugRendererInfo::kUnmaskedVendorWebgl:
       if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
-        return WebGLAny(script_state,
-                        String(ContextGL()->GetString(GL_VENDOR)));
+        return WebGLAny(script_state, String(kSpoofedWebGLVendor));
       }
       SynthesizeGLError(
           GL_INVALID_ENUM, "getParameter",

@@ -25,11 +25,16 @@
 #include "third_party/blink/renderer/platform/graphics/gpu/webgpu_callback.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
-#include "third_party/blink/renderer/platform/wtf/text/format.h"
 
 namespace blink {
 
 namespace {
+
+constexpr char kSpoofedVendor[] = "nvidia";
+constexpr char kSpoofedArchitecture[] = "ampere";
+constexpr char kSpoofedDevice[] = "0x2204";
+constexpr char kSpoofedDescription[] = "NVIDIA GeForce RTX 3090";
+constexpr char kSpoofedDriver[] = "NVIDIA";
 
 GPUSupportedFeatures* MakeFeatureNameSet(wgpu::Adapter adapter) {
   GPUSupportedFeatures* features = MakeGarbageCollected<GPUSupportedFeatures>();
@@ -95,15 +100,11 @@ GPUAdapter::GPUAdapter(
   // TODO(crbug.com/359418629): Report xr compatibility in GetInfo()
   is_xr_compatible_ = options->xrCompatible();
 
-  vendor_ = String::FromUtf8(info.vendor);
-  architecture_ = String::FromUtf8(info.architecture);
-  if (info.deviceID <= 0xffff) {
-    device_ = Format("0x{:04x}", info.deviceID);
-  } else {
-    device_ = Format("0x{:08x}", info.deviceID);
-  }
-  description_ = String::FromUtf8(info.device);
-  driver_ = String::FromUtf8(info.description);
+  vendor_ = kSpoofedVendor;
+  architecture_ = kSpoofedArchitecture;
+  device_ = kSpoofedDevice;
+  description_ = kSpoofedDescription;
+  driver_ = kSpoofedDriver;
   if (supportsPropertiesD3D) {
     d3d_shader_model_ = d3dProperties.shaderModel;
   }
@@ -124,7 +125,7 @@ GPUAdapter::GPUAdapter(
 }
 
 GPUAdapterInfo* GPUAdapter::CreateAdapterInfoForAdapter() {
-  bool is_fallback_adapter = adapter_type_ == wgpu::AdapterType::CPU;
+  constexpr bool is_fallback_adapter = false;
 
   GPUAdapterInfo* info;
   if (RuntimeEnabledFeatures::WebGPUDeveloperFeaturesEnabled()) {
@@ -133,8 +134,8 @@ GPUAdapterInfo* GPUAdapter::CreateAdapterInfoForAdapter() {
     info = MakeGarbageCollected<GPUAdapterInfo>(
         vendor_, architecture_, subgroup_min_size_, subgroup_max_size_,
         is_fallback_adapter, device_, description_, driver_,
-        FromDawnEnum(backend_type_), FromDawnEnum(adapter_type_),
-        d3d_shader_model_, vk_driver_version_, FromDawnEnum(power_preference_));
+        FromDawnEnum(backend_type_), "discrete GPU", d3d_shader_model_,
+        vk_driver_version_, FromDawnEnum(power_preference_));
 
     // SAFETY: Required from caller
     const auto memory_heaps_span =
@@ -146,7 +147,7 @@ GPUAdapterInfo* GPUAdapter::CreateAdapterInfoForAdapter() {
   } else {
     info = MakeGarbageCollected<GPUAdapterInfo>(
         vendor_, architecture_, subgroup_min_size_, subgroup_max_size_,
-        is_fallback_adapter);
+        is_fallback_adapter, device_, description_);
   }
 
   // SAFETY: Required from caller
