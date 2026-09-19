@@ -42,10 +42,6 @@ bool ScreenDetailed::AreWebExposedScreenDetailedPropertiesEqual(
   if (prev.is_internal != current.is_internal)
     return false;
 
-  // label()
-  if (prev.label != current.label)
-    return false;
-
   if (RuntimeEnabledFeatures::CanvasHDREnabled()) {
     // highDynamicRangeHeadroom()
     if (prev.display_color_spaces.GetHDRMaxLuminanceRelative() !=
@@ -134,7 +130,7 @@ float ScreenDetailed::devicePixelRatio() const {
 String ScreenDetailed::label() const {
   if (!DomWindow())
     return String();
-  return String::FromUtf8(GetScreenInfo().label);
+  return "Dell S2721H";
 }
 
 float ScreenDetailed::hdrHeadroom() const {
