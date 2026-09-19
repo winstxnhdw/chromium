@@ -5,7 +5,6 @@
 #include "chrome/browser/extensions/api/language_settings_private/language_settings_private_delegate_factory.h"
 
 #include "chrome/browser/extensions/api/language_settings_private/language_settings_private_delegate.h"
-#include "chrome/browser/spellchecker/spellcheck_factory.h"
 #include "content/public/browser/browser_context.h"
 #include "extensions/browser/extension_system_provider.h"
 #include "extensions/browser/extensions_browser_client.h"
@@ -40,7 +39,6 @@ LanguageSettingsPrivateDelegateFactory::LanguageSettingsPrivateDelegateFactory()
               .WithAshInternals(ProfileSelection::kRedirectedToOriginal)
               .Build()) {
   DependsOn(ExtensionsBrowserClient::Get()->GetExtensionSystemFactory());
-  DependsOn(SpellcheckServiceFactory::GetInstance());
 }
 
 LanguageSettingsPrivateDelegateFactory::

@@ -26,13 +26,16 @@ source_set("automation_internal") {
     "//content/public/browser",
     "//extensions/browser:browser_sources",
     "//extensions/browser/api:extensions_api_client",
-    "//extensions/browser/api/app_runtime",
     "//extensions/common",
     "//extensions/common:mojom",
     "//extensions/common/api",
     "//services/accessibility/public/mojom:automation",
     "//ui/accessibility:ax_base",
   ]
+
+  if (enable_platform_apps) {
+    public_deps += [ "//extensions/browser/api/app_runtime" ]
+  }
 
   deps = [
     "//build:chromeos_buildflags",

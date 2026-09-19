@@ -70,8 +70,6 @@
 #include "components/mirroring/service/mirroring_service.h"
 #include "services/proxy_resolver/proxy_resolver_factory_impl.h"  // nogncheck
 #include "services/proxy_resolver/public/mojom/proxy_resolver.mojom.h"
-#include "services/screen_ai/public/mojom/screen_ai_factory.mojom.h"  // nogncheck
-#include "services/screen_ai/screen_ai_service_impl.h"  // nogncheck
 #endif  // !BUILDFLAG(IS_ANDROID)
 
 #if BUILDFLAG(ENABLE_MEDIA_REMOTING_REDIRECTION)
@@ -301,10 +299,6 @@ auto RunReadingModeMetricsService(
       std::move(receiver));
 }
 
-auto RunScreenAIServiceFactory(
-    mojo::PendingReceiver<screen_ai::mojom::ScreenAIServiceFactory> receiver) {
-  return std::make_unique<screen_ai::ScreenAIService>(std::move(receiver));
-}
 #endif
 
 #if (BUILDFLAG(SAFE_BROWSING_DOWNLOAD_PROTECTION) && \
@@ -475,8 +469,8 @@ auto RunBabelOrcaTachyonParsingService(
 #if BUILDFLAG(IS_ANDROID)
 std::unique_ptr<readaloud::ReadAloudPlaybackController>
 RunReadAloudPlaybackControllerFactory(
-    mojo::PendingReceiver<
-        read_aloud::mojom::ReadAloudPlaybackControllerFactory> receiver) {
+    mojo::PendingReceiver<read_aloud::mojom::ReadAloudPlaybackControllerFactory>
+        receiver) {
   if (!features::IsReadAloudNativeEnabled()) {
     return nullptr;
   }
@@ -512,7 +506,6 @@ void RegisterMainThreadServices(mojo::ServiceFactory& services) {
   services.Add(RunProfileImporter);
   services.Add(RunMirroringService);
   services.Add(RunReadingModeMetricsService);
-  services.Add(RunScreenAIServiceFactory);
 #endif  // !BUILDFLAG(IS_ANDROID)
 
 #if BUILDFLAG(ENABLE_MEDIA_REMOTING_REDIRECTION)

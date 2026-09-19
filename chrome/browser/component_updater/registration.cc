@@ -64,8 +64,6 @@
 
 #if BUILDFLAG(IS_ANDROID)
 #include "chrome/browser/component_updater/real_time_url_checks_allowlist_component_installer.h"
-#else
-#include "chrome/browser/component_updater/screen_ai_component_installer.h"
 #endif  // BUILDFLAG(IS_ANDROID)
 
 #if !BUILDFLAG(IS_ANDROID)
@@ -205,10 +203,6 @@ void RegisterComponentsForUpdate() {
 #if BUILDFLAG(IS_ANDROID)
   RegisterRealTimeUrlChecksAllowlistComponent(cus);
 #endif  // BUIDLFLAG(IS_ANDROID)
-
-#if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_CHROMEOS)
-  ManageScreenAIComponentRegistration(cus, g_browser_process->local_state());
-#endif  // !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_CHROMEOS)
 
   RegisterCommerceHeuristicsComponent(cus);
 

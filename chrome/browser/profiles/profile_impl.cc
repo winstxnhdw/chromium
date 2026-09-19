@@ -232,7 +232,6 @@
 #include "chrome/browser/password_manager/factories/password_manager_settings_service_factory.h"
 #include "components/password_manager/core/common/password_manager_features.h"
 #else
-#include "chrome/browser/accessibility/ax_main_node_annotator_controller_factory.h"
 #include "chrome/browser/first_run/first_run.h"
 #include "chrome/browser/ui/startup/features.h"
 #include "content/public/common/page_zoom.h"
@@ -930,9 +929,6 @@ void ProfileImpl::DoFinalInit(CreateMode create_mode) {
   PasswordManagerSettingsServiceFactory::GetForProfile(this);
 #else
 
-  if (features::IsMainNodeAnnotationsEnabled()) {
-    screen_ai::AXMainNodeAnnotatorControllerFactory::GetForProfile(this);
-  }
 #endif  // BUILDFLAG(IS_ANDROID)
 
   if (features::IsLazyOptimizationGuideModelsEnabled() && IsRegularProfile()) {

@@ -125,17 +125,12 @@ source_set("impl") {
     "//components/language/core/browser",
     "//components/language/core/common",
     "//components/page_load_metrics/browser",
-    "//components/translate/content/browser",
     "//pdf:buildflags",
     "//services/metrics/public/cpp:metrics_cpp",
     "//services/metrics/public/cpp:ukm_builders",
   ]
-
   if (enable_pdf) {
-    deps += [
-      "//chrome/browser/pdf",
-      "//components/pdf/browser",
-    ]
+    deps += [ "//components/pdf/browser" ]
   }
 }
 
@@ -157,7 +152,6 @@ source_set("browser_tests") {
     "//base/test:test_support",
     "//chrome/browser",
     "//chrome/browser/optimization_guide:test_support",
-    "//chrome/browser/pdf:pdf_extension_test_utils",
     "//chrome/browser/search_engines",
     "//chrome/browser/translate",
     "//chrome/browser/ui:browser_commands",
@@ -191,6 +185,9 @@ source_set("browser_tests") {
     "//ui/accessibility",
     "//ui/views",
   ]
+  if (enable_pdf) {
+    deps += [ "//chrome/browser/pdf:pdf_extension_test_utils" ]
+  }
 }
 
 source_set("interactive_ui_tests") {

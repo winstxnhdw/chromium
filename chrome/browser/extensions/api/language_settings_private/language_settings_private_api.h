@@ -7,7 +7,6 @@
 
 #include "base/values.h"
 #include "build/build_config.h"
-#include "chrome/browser/spellchecker/spellcheck_custom_dictionary.h"
 #include "extensions/browser/extension_function.h"
 
 namespace extensions {
@@ -31,11 +30,6 @@ class LanguageSettingsPrivateGetLanguageListFunction
 
   // ExtensionFunction overrides.
   ResponseAction Run() override;
-
-#if BUILDFLAG(IS_WIN)
-  void OnDictionariesInitialized();
-  void UpdateSupportedPlatformDictionaries();
-#endif  // BUILDFLAG(IS_WIN)
 
  private:
   base::ListValue language_list_;
@@ -227,8 +221,7 @@ class LanguageSettingsPrivateGetSpellcheckDictionaryStatusesFunction
 
 // Implements the languageSettingsPrivate.getSpellcheckWords method.
 class LanguageSettingsPrivateGetSpellcheckWordsFunction
-    : public ExtensionFunction,
-      public SpellcheckCustomDictionary::Observer {
+    : public ExtensionFunction {
  public:
   LanguageSettingsPrivateGetSpellcheckWordsFunction();
 
@@ -245,14 +238,6 @@ class LanguageSettingsPrivateGetSpellcheckWordsFunction
 
   // ExtensionFunction overrides.
   ResponseAction Run() override;
-
-  // SpellcheckCustomDictionary::Observer overrides.
-  void OnCustomDictionaryLoaded() override;
-  void OnCustomDictionaryChanged(
-      const SpellcheckCustomDictionary::Change& dictionary_change) override;
-
-  // Returns the list of words from the loaded custom dictionary.
-  base::ListValue GetSpellcheckWords() const;
 };
 
 // Implements the languageSettingsPrivate.addSpellcheckWord method.

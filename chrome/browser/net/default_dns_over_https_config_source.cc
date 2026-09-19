@@ -16,6 +16,13 @@
 #include "ash/constants/ash_pref_names.h"
 #endif
 
+namespace {
+
+constexpr char kDefaultDnsOverHttpsTemplate[] =
+    "https://chrome.cloudflare-dns.com/dns-query";
+
+}  // namespace
+
 DefaultDnsOverHttpsConfigSource::DefaultDnsOverHttpsConfigSource(
     PrefService* local_state,
     bool set_up_pref_defaults) {
@@ -29,7 +36,10 @@ DefaultDnsOverHttpsConfigSource::DefaultDnsOverHttpsConfigSource(
   if (set_up_pref_defaults) {
     local_state->SetDefaultPrefValue(prefs::kDnsOverHttpsMode,
                                      base::Value(SecureDnsConfig::ModeToString(
-                                         net::SecureDnsMode::kAutomatic)));
+                                         net::SecureDnsMode::kSecure)));
+    local_state->SetDefaultPrefValue(
+        prefs::kDnsOverHttpsTemplates,
+        base::Value(kDefaultDnsOverHttpsTemplate));
   }
 }
 

@@ -163,22 +163,6 @@ void PluginResponseInterceptorURLLoaderThrottle::WillProcessResponse(
       request_destination_ != network::mojom::RequestDestination::kDocument;
 
   std::string extension_id;
-  if (response_head->mime_type == pdf::kPDFMimeType) {
-    // A generic MIME handler extension called
-    // chrome.mimeHandler.abortAndFallbackToNativeHandler() on a prior
-    // navigation for this embedder frame. Peek (not consume) at the fallback
-    // mark so the aborted extension does not re-claim its own response, and
-    // route the response to the built-in PDF viewer instead. The mark lives
-    // until the re-navigation it belongs to settles. Any kept response body
-    // was already consumed before this point, so all that is left here is
-    // the handler choice.
-    auto* stream_manager =
-        MimeHandlerStreamManager::FromWebContents(web_contents);
-    if (stream_manager && stream_manager->IsPendingNativeFallback(
-                              frame_tree_node_id_, response_url)) {
-      extension_id = extension_misc::kPdfExtensionId;
-    }
-  }
 
   if (extension_id.empty()) {
     extension_id = PluginUtils::GetExtensionIdForMimeType(
@@ -324,26 +308,9 @@ void PluginResponseInterceptorURLLoaderThrottle::WillProcessResponse(
   // exemption tied to this bit does not apply to it.
   transferrable_loader->head->intercepted_by_plugin = true;
 
-  scoped_refptr<extensions::MimeHandlerBodyCache> body_cache;
   transferrable_loader->url_loader = std::move(original_loader);
-  // Buffer the response body in memory while forwarding the bytes to the
-  // handler, so a later chrome.mimeHandler.abortAndFallbackToNativeHandler()
-  // call can serve the cached bytes instead of fetching the document again.
-  // Only a generic handler can abort, and only application/pdf has a native
-  // handler to fall back to, so every other response would pay for a buffer
-  // nothing can consume. The legacy GuestView path is left on the re-fetch it
-  // does today rather than changed alongside this. On forwarding-pipe
-  // creation failure the original source handle is returned via
-  // `forwarding_pipe`, so the body is never lost.
-  if (is_for_generic_mime_handler && original_mime_type == pdf::kPDFMimeType &&
-      chrome_pdf::features::IsOopifPdfEnabled()) {
-    mojo::ScopedDataPipeConsumerHandle forwarding_pipe;
-    body_cache = extensions::MimeHandlerBodyCache::Create(
-        std::move(consumer_handle), &forwarding_pipe);
-    transferrable_loader->body = std::move(forwarding_pipe);
-  } else {
-    transferrable_loader->body = std::move(consumer_handle);
-  }
+  scoped_refptr<extensions::MimeHandlerBodyCache> body_cache;
+  transferrable_loader->body = std::move(consumer_handle);
   transferrable_loader->url_loader_client = std::move(original_client);
 
   content::GetUIThreadTaskRunner({})->PostTask(

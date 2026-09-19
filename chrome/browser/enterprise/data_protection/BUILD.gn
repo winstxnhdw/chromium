@@ -54,7 +54,8 @@ source_set("unit_tests") {
     deps += [ "//components/enterprise/connectors/core:cloud_content_scanning" ]
   }
 
-  if (enable_extensions && enterprise_local_content_analysis) {
+  if (enable_extensions && enterprise_local_content_analysis &&
+      enable_printing) {
     sources += [ "print_utils_unittest.cc" ]
     deps += [ "//chrome/browser/printing:test_support" ]
   }

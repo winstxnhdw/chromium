@@ -5384,9 +5384,7 @@ std::wstring ChromeContentBrowserClient::GetAppContainerSidForSandboxType(
     case sandbox::mojom::Sandbox::kXrCompositing:
     case sandbox::mojom::Sandbox::kNetwork:
     case sandbox::mojom::Sandbox::kCdm:
-#if BUILDFLAG(ENABLE_OOP_PRINTING)
     case sandbox::mojom::Sandbox::kPrintBackend:
-#endif
     case sandbox::mojom::Sandbox::kPrintCompositor:
     case sandbox::mojom::Sandbox::kAudio:
     case sandbox::mojom::Sandbox::kScreenAI:
@@ -5495,9 +5493,7 @@ bool ChromeContentBrowserClient::PreSpawnChild(
     case sandbox::mojom::Sandbox::kNoSandboxAndElevatedPrivileges:
     case sandbox::mojom::Sandbox::kXrCompositing:
     case sandbox::mojom::Sandbox::kCdm:
-#if BUILDFLAG(ENABLE_PRINTING)
     case sandbox::mojom::Sandbox::kPrintBackend:
-#endif
     case sandbox::mojom::Sandbox::kPrintCompositor:
     case sandbox::mojom::Sandbox::kScreenAI:
     case sandbox::mojom::Sandbox::kAudio:

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/ui.gni")
+import("//extensions/buildflags/buildflags.gni")
 
 assert(toolkit_views)
 
@@ -43,14 +44,18 @@ source_set("impl") {
   ]
   deps = [
     ":app_info_dialog",
-    "//apps",
-    "//chrome/browser/apps/platform_apps",
     "//chrome/browser/ui:scoped_tabbed_browser_displayer",
     "//chrome/browser/ui/dialogs:browser_dialogs",
     "//chrome/browser/ui/views:layout_provider",
     "//chrome/browser/web_applications",
     "//components/app_constants",
   ]
+  if (enable_platform_apps) {
+    deps += [
+      "//apps",
+      "//chrome/browser/apps/platform_apps",
+    ]
+  }
 
   if (is_chromeos) {
     sources += [ "arc_app_info_links_panel.cc" ]
@@ -72,7 +77,6 @@ source_set("unit_tests") {
   ]
   deps = [
     ":app_info_dialog",
-    "//apps",
     "//base",
     "//chrome/app:generated_resources",
     "//chrome/browser/extensions",
@@ -81,6 +85,9 @@ source_set("unit_tests") {
     "//chrome/test/base:testing_browser_process",
     "//components/app_constants",
   ]
+  if (enable_platform_apps) {
+    deps += [ "//apps" ]
+  }
   if (is_chromeos) {
     deps += [
       "//chrome/browser/ash/app_list/arc:test_support",

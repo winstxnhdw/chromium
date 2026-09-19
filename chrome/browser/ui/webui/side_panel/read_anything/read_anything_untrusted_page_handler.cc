@@ -21,8 +21,6 @@
 #include "chrome/browser/dom_distiller/dom_distiller_service_factory.h"
 #include "chrome/browser/language/language_model_manager_factory.h"
 #include "chrome/browser/profiles/profile.h"
-#include "chrome/browser/screen_ai/screen_ai_service_router.h"
-#include "chrome/browser/screen_ai/screen_ai_service_router_factory.h"
 #include "chrome/browser/speech/extension_api/tts_engine_extension_api.h"
 #include "chrome/browser/translate/chrome_translate_client.h"
 #include "chrome/browser/ui/read_anything/read_anything_controller.h"
@@ -47,8 +45,6 @@
 #include "components/language/core/browser/language_model_manager.h"
 #include "components/language/core/common/locale_util.h"
 #include "components/language_detection/core/constants.h"
-#include "components/pdf/browser/pdf_frame_util.h"
-#include "components/pdf/common/constants.h"
 #include "components/prefs/pref_service.h"
 #include "components/prefs/scoped_user_pref_update.h"
 #include "components/translate/core/browser/translate_manager.h"
@@ -81,12 +77,6 @@
 #include "url/gurl.h"
 #include "url/origin.h"
 #include "url/url_constants.h"
-
-#if BUILDFLAG(ENABLE_PDF)
-#include "components/pdf/common/pdf_util.h"
-#include "extensions/browser/mime_handler/mime_handler_stream_manager.h"
-#include "pdf/pdf_features.h"
-#endif  // BUILDFLAG(ENABLE_PDF)
 
 #if BUILDFLAG(IS_CHROMEOS)
 #include "ash/public/cpp/session/session_controller.h"
@@ -278,42 +268,6 @@ constexpr std::string_view kRendererScrollRequestHistogram =
 constexpr std::string_view kRendererSelectionRequestHistogram =
     "Accessibility.ReadAnything.RendererRequestForSelection.Result";
 
-// The contents MIME type is fixed when the main frame commits, so this reliably
-// identifies full-page PDFs before their content frame exists.
-bool IsFullPagePdf(content::WebContents* contents) {
-  return contents && contents->GetContentsMimeType() == pdf::kPDFMimeType;
-}
-
-bool IsPdfContents(content::WebContents* contents, bool has_pdf_observer) {
-  if (!contents) {
-    return false;
-  }
-  return chrome_pdf::features::IsOopifPdfEnabled()
-             ? !!extensions::mime_handler::MimeHandlerStreamManager::
-                    FromWebContents(contents)
-             : has_pdf_observer;
-}
-
-// Returns the frame hosting the PDF's contents, or nullptr if `contents` is
-// not displaying a PDF or the frame does not exist yet. This is the frame that
-// `PdfAccessibilityTree` serializes the PDF's accessibility nodes into, so its
-// tree is the one holding the PDF text.
-//
-// With OOPIF PDF the content frame is a child of the PDF extension host, which
-// is itself a child of the primary main frame; without it, the extension frame
-// is the primary main frame of the guest contents. Either way the content
-// frame is the child of the embedder host. This mirrors the resolution used by
-// printing (printing::GetRenderFrameHostToUse) and Mahi
-// (mahi::GetPDFRenderFrameHost).
-content::RenderFrameHost* FindPdfContentFrame(content::WebContents* contents) {
-  content::RenderFrameHost* embedder_host =
-      chrome_pdf::features::IsOopifPdfEnabled()
-          ? pdf_frame_util::FindFullPagePdfExtensionHost(contents)
-          : contents->GetPrimaryMainFrame();
-  return embedder_host ? pdf_frame_util::FindPdfChildFrame(embedder_host)
-                       : nullptr;
-}
-
 // Returns whether `rfh` is a subframe of the primary page that the primary main
 // frame can already script, i.e. it is same-origin with it. Opaque main frame
 // origins are excluded because opaque-origin frames cannot script each other.
@@ -426,7 +380,7 @@ ReadAnythingUntrustedPageHandler::ReadAnythingUntrustedPageHandler(
     mojo::PendingRemote<UntrustedPage> page,
     mojo::PendingReceiver<UntrustedPageHandler> receiver,
     content::WebUI* web_ui,
-    bool use_screen_ai_service
+    bool /*use_screen_ai_service*/
 #if BUILDFLAG(IS_CHROMEOS)
     ,
     std::unique_ptr<ChromeOsExtensionWrapper> extension_wrapper
@@ -436,7 +390,6 @@ ReadAnythingUntrustedPageHandler::ReadAnythingUntrustedPageHandler(
       web_ui_(web_ui),
       receiver_(this, std::move(receiver)),
       page_(std::move(page)),
-      use_screen_ai_service_(use_screen_ai_service),
 #if BUILDFLAG(IS_CHROMEOS)
       extension_wrapper_(std::move(extension_wrapper)),
 #endif
@@ -484,15 +437,6 @@ ReadAnythingUntrustedPageHandler::ReadAnythingUntrustedPageHandler(
   std::string prefs_lang = language_model->GetLanguages().front().lang_code;
   prefs_lang = language::ExtractBaseLanguage(prefs_lang);
   SetDefaultLanguageCode(prefs_lang);
-
-  if (use_screen_ai_service_) {
-    screen_ai::ScreenAIServiceRouterFactory::GetForBrowserContext(profile_)
-        ->GetServiceStateAsync(
-            screen_ai::ScreenAIServiceRouter::Service::kMainContentExtraction,
-            base::BindOnce(
-                &ReadAnythingUntrustedPageHandler::OnScreenAIServiceInitialized,
-                weak_factory_.GetWeakPtr()));
-  }
 
   if (features::IsReadAnythingWithReadabilityEnabled() &&
       !features::IsReadAnythingReadAloudPhraseHighlightingEnabled()) {
@@ -917,37 +861,15 @@ bool ReadAnythingUntrustedPageHandler::IsObservingTree(
     return false;
   }
 
-  content::WebContents* contents = !!pdf_observer_
-                                       ? pdf_observer_->web_contents()
-                                       : main_observer_->web_contents();
+  content::WebContents* contents = main_observer_->web_contents();
 
   if (!contents) {
     return false;
   }
 
-  if (!IsPdfContents(contents, !!pdf_observer_)) {
-    // `contents` is the main observed contents here.
-    content::RenderFrameHost* main_frame = contents->GetPrimaryMainFrame();
-    return rfh == main_frame || IsSameOriginSubframe(rfh, main_frame) ||
-           IsWhatsNewEmbeddedContentFrame(rfh, main_frame);
-  }
-
-  content::RenderFrameHost* pdf_rfh =
-      chrome_pdf::features::IsOopifPdfEnabled()
-          ? pdf_frame_util::FindFullPagePdfExtensionHost(contents)
-          : pdf_frame_util::FindPdfChildFrame(contents->GetPrimaryMainFrame());
-  if (!pdf_rfh) {
-    return false;
-  }
-  if (rfh == pdf_rfh) {
-    return true;
-  }
-
-  // For OOPIF PDFs, `pdf_rfh` is the extension host, while PDF content lives
-  // in its child frame. Accept both so requests targeting either the extension
-  // host or the content frame succeed.
-  return chrome_pdf::features::IsOopifPdfEnabled() &&
-         rfh == pdf_frame_util::FindPdfChildFrame(pdf_rfh);
+  content::RenderFrameHost* main_frame = contents->GetPrimaryMainFrame();
+  return rfh == main_frame || IsSameOriginSubframe(rfh, main_frame) ||
+         IsWhatsNewEmbeddedContentFrame(rfh, main_frame);
 }
 
 bool ReadAnythingUntrustedPageHandler::AreActionsAllowedInTree(
@@ -958,9 +880,7 @@ bool ReadAnythingUntrustedPageHandler::AreActionsAllowedInTree(
     return false;
   }
 
-  content::WebContents* contents = GetWebContents();
-  return IsPdfContents(contents, !!pdf_observer_) ||
-         rfh->GetLastCommittedURL().SchemeIsHTTPOrHTTPS();
+  return rfh->GetLastCommittedURL().SchemeIsHTTPOrHTTPS();
 }
 
 void ReadAnythingUntrustedPageHandler::OnLineSpaceChange(
@@ -1620,17 +1540,6 @@ void ReadAnythingUntrustedPageHandler::OnTabWillDetach(
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// screen_ai::ScreenAIInstallState::Observer:
-///////////////////////////////////////////////////////////////////////////////
-
-void ReadAnythingUntrustedPageHandler::OnScreenAIServiceInitialized(
-    bool successful) {
-  if (successful) {
-    page_->ScreenAIServiceReady();
-  }
-}
-
 void ReadAnythingUntrustedPageHandler::SetUpPdfObserver() {
 #if BUILDFLAG(ENABLE_PDF)
   content::WebContents* main_contents = main_observer_->web_contents();
@@ -1784,13 +1693,12 @@ bool ReadAnythingUntrustedPageHandler::RequestDomDistillerDistillation(
     content::WebContents* content) {
   if (!content || !features::IsReadAnythingWithReadabilityEnabled() ||
       features::IsReadAnythingReadAloudPhraseHighlightingEnabled() ||
-      IsPdfContents(content, !!pdf_observer_) ||
       IsGoogleDocs(content->GetLastCommittedURL())) {
     return false;
   }
 
-  // Don't attempt Readability distillation in automated tests. This is to prevent internal
-  // scripts from leaking.
+  // Don't attempt Readability distillation in automated tests. This is to
+  // prevent internal scripts from leaking.
   if (base::CommandLine::ForCurrentProcess()->HasSwitch(
           switches::kEnableAutomation)) {
     page_->OnReadabilityDistillationStateChanged(

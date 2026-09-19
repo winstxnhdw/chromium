@@ -64,8 +64,6 @@ class ReadAnythingEntryPointController {
       BrowserWindowInterface* bwi,
       base::OnceCallback<void(bool)> result_callback);
 
-  static base::AutoReset<size_t> SetMinPdfTextLengthForTesting(size_t length);
-
   static int CheckCountForTesting();
   static void ResetCheckCountForTesting();
 

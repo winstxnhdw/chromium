@@ -12,8 +12,6 @@
 #include "chrome/browser/extensions/window_controller.h"
 #include "extensions/buildflags/buildflags.h"
 
-static_assert(BUILDFLAG(ENABLE_PLATFORM_APPS));
-
 class Profile;
 
 namespace extensions {

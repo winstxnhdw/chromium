@@ -313,10 +313,12 @@ static_library("common_lib") {
     if (is_win || is_mac || is_linux || is_chromeos) {
       assert(enable_extensions)
       deps += [
-        "//chrome/common/apps/platform_apps",
         "//chrome/common/controlled_frame",
         "//components/app_constants",
       ]
+      if (enable_platform_apps) {
+        deps += [ "//chrome/common/apps/platform_apps" ]
+      }
       public_deps += [
         "//chrome/common/extensions/api",
         "//chrome/common/extensions/api:extensions_features",
