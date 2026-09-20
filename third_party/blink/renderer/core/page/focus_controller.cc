@@ -1761,6 +1761,14 @@ FocusController::FocusController(Page* page)
       // loses focus.
       is_emulating_focus_(true) {}
 
+bool FocusController::IsActive() const {
+  return !page_->IsPrerendering() && (is_active_ || is_emulating_focus_);
+}
+
+bool FocusController::IsFocused() const {
+  return !page_->IsPrerendering() && (is_focused_ || is_emulating_focus_);
+}
+
 // static
 const ContainerNode* FocusController::ReadingFlowContainerOrDisplayContents(
     const ContainerNode* node,

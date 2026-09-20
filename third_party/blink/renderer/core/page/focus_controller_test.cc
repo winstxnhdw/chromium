@@ -475,6 +475,21 @@ TEST_F(FocusControllerTest, FocusEmulationCannotBeDisabled) {
   EXPECT_TRUE(controller.IsDocumentFocused(GetDocument()));
 }
 
+TEST_F(FocusControllerTest, FocusIsNotEmulatedWhilePrerendering) {
+  SetBodyInnerHTML("<div id=host></div>");
+  auto& controller = GetFocusController();
+  controller.SetFocused(false);
+  controller.SetActive(false);
+
+  GetPage().SetIsPrerendering(true);
+  EXPECT_FALSE(controller.IsActive());
+  EXPECT_FALSE(controller.IsFocused());
+  EXPECT_FALSE(controller.IsDocumentFocused(GetDocument()));
+
+  GetPage().SetIsPrerendering(false);
+  EXPECT_TRUE(controller.IsDocumentFocused(GetDocument()));
+}
+
 TEST_F(FocusControllerTest, FocusIsRestoredAfterNavigation) {
   SetBodyInnerHTML("<div id=host></div>");
   auto& controller = GetFocusController();
