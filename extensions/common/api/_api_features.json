@@ -342,7 +342,10 @@
   }, {
     "channel": "stable",
     "contexts": ["web_page"],
-    "matches": ["https://chromewebstore.google.com/*"]
+    "matches": [
+      "https://chrome.google.com/webstore/*",
+      "https://chromewebstore.google.com/*"
+    ]
   }, {
     // Used for webstore testing. See comment in
     // chrome/common/extensions/webstore_override.cc
@@ -987,7 +990,10 @@
   "webstorePrivate": [{
     "channel": "stable",
     "contexts": ["web_page"],
-    "matches": ["https://chromewebstore.google.com/*"]
+    "matches": [
+      "https://chrome.google.com/webstore/*",
+      "https://chromewebstore.google.com/*"
+    ]
   }, {
     // Used for webstore testing. See comment in
     // chrome/common/extensions/webstore_override.cc

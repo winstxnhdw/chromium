@@ -18,10 +18,7 @@ buildflag_header("buildflags") {
     "ENABLE_EXTENSIONS=$enable_extensions",
     "ENABLE_DESKTOP_ANDROID_EXTENSIONS=$enable_desktop_android_extensions",
     "ENABLE_EXTENSIONS_CORE=$enable_extensions_core",
-    # Keep the implementation targets available because the desktop Chrome
-    # dependency graph still has unconditional references to their symbols,
-    # but compile all consumers as though platform apps are unavailable.
-    "ENABLE_PLATFORM_APPS=false",
+    "ENABLE_PLATFORM_APPS=$enable_platform_apps",
     "ENABLE_HOSTED_APPS=$enable_hosted_apps",
   ]
 }
