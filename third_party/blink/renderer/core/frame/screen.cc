@@ -41,6 +41,13 @@
 
 namespace blink {
 
+namespace {
+
+constexpr int kReportedScreenWidth = 1920;
+constexpr int kReportedScreenHeight = 1080;
+
+}  // namespace
+
 Screen::Screen(LocalDOMWindow* window, int64_t display_id)
     : ExecutionContextClient(window), display_id_(display_id) {}
 
@@ -169,18 +176,10 @@ bool Screen::isExtended() const {
   return GetScreenInfo().is_extended;
 }
 
-gfx::Rect Screen::GetRect(bool available) const {
+gfx::Rect Screen::GetRect(bool /*available*/) const {
   if (!DomWindow())
     return gfx::Rect();
-  LocalFrame* frame = DomWindow()->GetFrame();
-  const display::ScreenInfo& screen_info = GetScreenInfo();
-  gfx::Rect rect = available ? screen_info.available_rect : screen_info.rect;
-  if (frame->GetSettings()->GetReportScreenSizeInPhysicalPixelsQuirk())
-    return gfx::ScaleToRoundedRect(rect, screen_info.device_scale_factor);
-  if (frame->GetDocument() && frame->GetDocument()->TextScaleMetaTagPresent()) {
-    return gfx::ScaleToRoundedRect(rect, screen_info.text_scale_multiplier);
-  }
-  return rect;
+  return gfx::Rect(0, 0, kReportedScreenWidth, kReportedScreenHeight);
 }
 
 const display::ScreenInfo& Screen::GetScreenInfo() const {

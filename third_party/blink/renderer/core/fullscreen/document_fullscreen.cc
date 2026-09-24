@@ -29,8 +29,8 @@
 
 namespace blink {
 
-bool DocumentFullscreen::fullscreenEnabled(Document& document) {
-  return Fullscreen::FullscreenEnabled(document);
+bool DocumentFullscreen::fullscreenEnabled(Document&) {
+  return true;
 }
 
 Element* DocumentFullscreen::fullscreenElement(Document& document) {
@@ -41,10 +41,16 @@ ScriptPromise<IDLUndefined> DocumentFullscreen::exitFullscreen(
     ScriptState* script_state,
     Document& document,
     ExceptionState& exception_state) {
+  if (!Fullscreen::FullscreenElementFrom(document)) {
+    return ToResolvedUndefinedPromise(script_state);
+  }
   return Fullscreen::ExitFullscreen(document, script_state, &exception_state);
 }
 
 void DocumentFullscreen::webkitExitFullscreen(Document& document) {
+  if (!Fullscreen::FullscreenElementFrom(document)) {
+    return;
+  }
   auto promise = Fullscreen::ExitFullscreen(document);
   DCHECK(promise.IsEmpty());
 }

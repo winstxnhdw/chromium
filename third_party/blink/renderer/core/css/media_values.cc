@@ -290,39 +290,13 @@ const String MediaValues::CalculateMediaType(LocalFrame* frame) {
 
 mojom::blink::DisplayMode MediaValues::CalculateDisplayMode(LocalFrame* frame) {
   DCHECK(frame);
-
-  blink::mojom::DisplayMode mode =
-      frame->GetPage()->GetSettings().GetDisplayModeOverride();
-  if (mode != mojom::blink::DisplayMode::kUndefined) {
-    return mode;
-  }
-
-  FrameWidget* widget = frame->GetWidgetForLocalRoot();
-  if (!widget) {  // Is null in non-ordinary Pages.
-    return mojom::blink::DisplayMode::kBrowser;
-  }
-
-  return widget->DisplayMode();
+  return mojom::blink::DisplayMode::kFullscreen;
 }
 
 ui::mojom::blink::WindowShowState MediaValues::CalculateWindowShowState(
     LocalFrame* frame) {
   DCHECK(frame);
-
-  ui::mojom::blink::WindowShowState show_state =
-      frame->GetPage()->GetSettings().GetWindowShowState();
-  // Initial state set in /third_party/blink/renderer/core/frame/settings.json5
-  // should match with this.
-  if (show_state != ui::mojom::blink::WindowShowState::kDefault) {
-    return show_state;
-  }
-
-  FrameWidget* widget = frame->GetWidgetForLocalRoot();
-  if (!widget) {  // Is null in non-ordinary Pages.
-    return ui::mojom::blink::WindowShowState::kDefault;
-  }
-
-  return widget->WindowShowState();
+  return ui::mojom::blink::WindowShowState::kFullscreen;
 }
 
 bool MediaValues::CalculateResizable(LocalFrame* frame) {
