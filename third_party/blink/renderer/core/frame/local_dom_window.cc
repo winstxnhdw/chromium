@@ -1677,64 +1677,14 @@ int LocalDOMWindow::outerHeight() const {
   if (!GetFrame()) {
     return 0;
   }
-
-  LocalFrame* frame = GetFrame();
-
-  // FencedFrames should return innerHeight to prevent passing
-  // arbitrary data through the window height.
-  if (frame->IsInFencedFrameTree()) {
-    return innerHeight();
-  }
-
-  Page* page = frame->GetPage();
-  if (!page) {
-    return 0;
-  }
-
-  ChromeClient& chrome_client = page->GetChromeClient();
-  if (page->GetSettings().GetReportScreenSizeInPhysicalPixelsQuirk()) {
-    return static_cast<int>(
-        lroundf(chrome_client.RootWindowRect(*frame).height() *
-                chrome_client.GetScreenInfo(*frame).device_scale_factor));
-  }
-  int height = chrome_client.RootWindowRect(*frame).height();
-  if (document() && document()->TextScaleMetaTagPresent()) {
-    height = static_cast<int>(lroundf(
-        height * chrome_client.GetScreenInfo(*frame).text_scale_multiplier));
-  }
-  return height;
+  return kReportedViewportHeight;
 }
 
 int LocalDOMWindow::outerWidth() const {
   if (!GetFrame()) {
     return 0;
   }
-
-  LocalFrame* frame = GetFrame();
-
-  // FencedFrames should return innerWidth to prevent passing
-  // arbitrary data through the window width.
-  if (frame->IsInFencedFrameTree()) {
-    return innerWidth();
-  }
-
-  Page* page = frame->GetPage();
-  if (!page) {
-    return 0;
-  }
-
-  ChromeClient& chrome_client = page->GetChromeClient();
-  if (page->GetSettings().GetReportScreenSizeInPhysicalPixelsQuirk()) {
-    return static_cast<int>(
-        lroundf(chrome_client.RootWindowRect(*frame).width() *
-                chrome_client.GetScreenInfo(*frame).device_scale_factor));
-  }
-  int width = chrome_client.RootWindowRect(*frame).width();
-  if (document() && document()->TextScaleMetaTagPresent()) {
-    width = static_cast<int>(lroundf(
-        width * chrome_client.GetScreenInfo(*frame).text_scale_multiplier));
-  }
-  return width;
+  return kReportedViewportWidth;
 }
 
 gfx::Size LocalDOMWindow::GetViewportSize() const {
@@ -1787,53 +1737,17 @@ int LocalDOMWindow::innerWidth() const {
 }
 
 int LocalDOMWindow::screenX() const {
-  LocalFrame* frame = GetFrame();
-  if (!frame) {
+  if (!GetFrame()) {
     return 0;
   }
-
-  Page* page = frame->GetPage();
-  if (!page) {
-    return 0;
-  }
-
-  ChromeClient& chrome_client = page->GetChromeClient();
-  if (page->GetSettings().GetReportScreenSizeInPhysicalPixelsQuirk()) {
-    return static_cast<int>(
-        lroundf(chrome_client.RootWindowRect(*frame).x() *
-                chrome_client.GetScreenInfo(*frame).device_scale_factor));
-  }
-  int screenX = chrome_client.RootWindowRect(*frame).x();
-  if (document() && document()->TextScaleMetaTagPresent()) {
-    screenX = static_cast<int>(lroundf(
-        screenX * chrome_client.GetScreenInfo(*frame).text_scale_multiplier));
-  }
-  return screenX;
+  return 0;
 }
 
 int LocalDOMWindow::screenY() const {
-  LocalFrame* frame = GetFrame();
-  if (!frame) {
+  if (!GetFrame()) {
     return 0;
   }
-
-  Page* page = frame->GetPage();
-  if (!page) {
-    return 0;
-  }
-
-  ChromeClient& chrome_client = page->GetChromeClient();
-  if (page->GetSettings().GetReportScreenSizeInPhysicalPixelsQuirk()) {
-    return static_cast<int>(
-        lroundf(chrome_client.RootWindowRect(*frame).y() *
-                chrome_client.GetScreenInfo(*frame).device_scale_factor));
-  }
-  int screenY = chrome_client.RootWindowRect(*frame).y();
-  if (document() && document()->TextScaleMetaTagPresent()) {
-    screenY = static_cast<int>(lroundf(
-        screenY * chrome_client.GetScreenInfo(*frame).text_scale_multiplier));
-  }
-  return screenY;
+  return 0;
 }
 
 double LocalDOMWindow::scrollX() const {

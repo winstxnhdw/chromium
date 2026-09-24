@@ -3025,7 +3025,8 @@ bool SelectorChecker::CheckPseudoClass(const SelectorCheckingContext& context,
     case CSSSelector::kPseudoFullscreen:
     // fall through
     case CSSSelector::kPseudoFullScreen:
-      return Fullscreen::IsFullscreenFlagSetFor(element);
+      return Fullscreen::IsFullscreenFlagSetFor(element) ||
+             element == element.GetDocument().documentElement();
     case CSSSelector::kPseudoFullScreenAncestor:
       return element.ContainsFullScreenElement();
     case CSSSelector::kPseudoPermissionGranted: {

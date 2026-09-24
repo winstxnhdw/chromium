@@ -623,8 +623,12 @@ Element* Fullscreen::FullscreenElementFrom(Document& document) {
 // https://fullscreen.spec.whatwg.org/#fullscreen-element
 Element* Fullscreen::FullscreenElementForBindingFrom(TreeScope& scope) {
   Element* element = FullscreenElementFrom(scope.GetDocument());
-  if (!element)
+  if (!element) {
+    element = scope.GetDocument().documentElement();
+  }
+  if (!element) {
     return nullptr;
+  }
   return scope.AdjustedElement(*element);
 }
 
