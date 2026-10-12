@@ -1464,8 +1464,7 @@ void ReadAnythingUntrustedPageHandler::OnReadingModePresenterChanged() {
 }
 
 // This is used for same-document navigations (such as fragment navigations) in
-// the main frame, as well as subframe navigations that may commit a late-
-// arriving PDF content frame.
+// the main frame.
 void ReadAnythingUntrustedPageHandler::DidFinishNavigation(
     content::NavigationHandle* navigation_handle) {
   if (!navigation_handle->HasCommitted()) {
@@ -1473,9 +1472,6 @@ void ReadAnythingUntrustedPageHandler::DidFinishNavigation(
   }
 
   if (!navigation_handle->IsInPrimaryMainFrame()) {
-    if (IsFullPagePdf(main_observer_->web_contents())) {
-      CheckForPdfContentFrame();
-    }
     return;
   }
 

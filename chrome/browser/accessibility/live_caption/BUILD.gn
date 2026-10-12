@@ -45,7 +45,6 @@ source_set("impl") {
     "//chrome/browser:browser_process",
     "//chrome/browser/accessibility",
     "//chrome/browser/extensions",
-    "//chrome/browser/ui",
     "//chrome/browser/ui/browser_window",
     "//components/live_caption",
     "//components/live_caption:constants",

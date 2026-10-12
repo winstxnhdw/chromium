@@ -102,7 +102,6 @@ source_set("impl") {
     deps += [
       "//chrome/browser/accessibility/live_caption:impl",
       "//chrome/browser/extensions",
-      "//chrome/browser/ui",
       "//chrome/browser/ui/browser_window",
       "//chrome/browser/ui/views/frame:browser_view_header",
       "//components/live_caption:live_translate",

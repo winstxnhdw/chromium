@@ -7,20 +7,28 @@ import("//extensions/buildflags/buildflags.gni")
 assert(enable_platform_apps,
        "Cannot depend on platform apps because enable_platform_apps=false.")
 
+# Shared metadata does not require the platform-app API implementation.
+source_set("saved_file_entry") {
+  sources = [
+    "saved_file_entry.cc",
+    "saved_file_entry.h",
+  ]
+  public_deps = [ "//base" ]
+}
+
 source_set("file_system") {
   sources = [
     "consent_provider.h",
     "file_system_api.cc",
     "file_system_api.h",
     "file_system_delegate.h",
-    "saved_file_entry.cc",
-    "saved_file_entry.h",
     "saved_files_service_interface.h",
   ]
 
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
 
   public_deps = [
+    ":saved_file_entry",
     "//base",
     "//build:chromeos_buildflags",
     "//extensions/browser:browser_sources",

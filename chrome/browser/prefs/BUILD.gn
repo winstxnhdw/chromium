@@ -10,7 +10,6 @@ import("//components/safe_browsing/buildflags.gni")
 import("//extensions/buildflags/buildflags.gni")
 import("//pdf/features.gni")
 import("//rlz/buildflags/buildflags.gni")
-import("//services/screen_ai/buildflags/features.gni")
 
 assert(is_win || is_mac || is_linux || is_chromeos || is_android)
 
@@ -427,22 +426,13 @@ source_set("impl") {
     deps += [ "//chrome/browser/ui/ai_overlay_dialog" ]
   }
 
-  if (enable_screen_ai_service) {
-    deps += [ "//chrome/browser/screen_ai:prefs" ]
-  }
-
   if (enable_extensions) {
     deps += [
-      "//extensions/browser/api/audio",
       "//extensions/browser/api/runtime",
     ]
     if (is_chromeos) {
       deps += [ "//extensions/browser/api/audio" ]
     }
-  }
-
-  if (enable_platform_apps) {
-    deps += [ "//chrome/browser/apps/platform_apps" ]
   }
 
   if (enable_extensions_core) {

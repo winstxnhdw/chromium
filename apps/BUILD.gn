@@ -41,6 +41,7 @@ static_library("apps") {
     "//content/public/browser",
     "//content/public/common",
     "//extensions/browser",
+    "//extensions/browser/api/file_system:saved_file_entry",
     "//extensions/common",
     "//extensions/common/api",
   ]

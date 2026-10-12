@@ -646,7 +646,6 @@ if (!is_android) {
         "//chrome/browser/ui/webui/app_settings",
         "//chrome/browser/ui/webui/intro",
         "//chrome/browser/ui/webui/intro:mojo_bindings",
-        "//chrome/browser/ui/webui/on_device_translation_internals",
         "//chrome/browser/ui/webui/signin",
         "//chrome/browser/ui/webui/signin:profile",
         "//chrome/browser/ui/webui/signin/history_sync_optin:mojo_bindings",
@@ -4498,7 +4497,6 @@ source_set("browser") {
       "//chrome/browser/ui/webui/app_settings",
       "//chrome/browser/ui/webui/browser_switch",
       "//chrome/browser/ui/webui/intro",
-      "//chrome/browser/ui/webui/on_device_translation_internals",
       "//chrome/browser/ui/webui/signin:profile_impl",
       "//chrome/browser/ui/webui/updater",
     ]

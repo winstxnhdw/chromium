@@ -61,7 +61,6 @@ group("api_implementations") {
   if (enable_extensions) {
     public_deps += [
       "//extensions/browser:browser_sources",
-      "//extensions/browser/api/audio",
       "//extensions/browser/api/automation_internal",
       "//extensions/browser/api/feedback_private",
       "//extensions/browser/api/mime_handler",
@@ -76,15 +75,6 @@ group("api_implementations") {
       "//extensions/browser/api/system_info",
       "//extensions/browser/api/system_storage",
     ]
-
-    if (enable_platform_apps) {
-      public_deps += [
-        "//extensions/browser/api/app_current_window_internal",
-        "//extensions/browser/api/app_runtime",
-        "//extensions/browser/api/app_window",
-        "//extensions/browser/api/file_system",
-      ]
-    }
 
     if (is_chromeos) {
       public_deps += [
@@ -153,7 +143,14 @@ source_set("api_provider") {
 # ExtensionFunctions in order to map the function string name with their
 # implementation.
 function_registration("api_registration") {
-  sources = extensions_api_schema_files + extensions_api_uncompiled_sources
+  # Keep shared schema types, but never register the removed platform-app APIs.
+  sources = filter_exclude(
+          extensions_api_schema_files + extensions_api_uncompiled_sources,
+          [
+            "*/app_current_window_internal.webidl",
+            "*/app_window.webidl",
+            "*/file_system.webidl",
+          ])
   impl_dir = "//extensions/browser/api"
   bundle_name = ""
   root_namespace = extensions_api_root_namespace
