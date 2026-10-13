@@ -24,12 +24,9 @@ declare_args() {
   # Note: this flag is used by WebRTC which is DEPSed into Chrome. Moving it
   # out of //build will require using the build_overrides directory.
   #
-  # Do not add any other conditions to the following line.
-  #
-  # TODO(crbug.com/1314528): Remove chromecast-related conditions and force
-  # builds to explicitly specify this.
-  proprietary_codecs = is_chrome_branded || is_castos || is_cast_android ||
-                       is_chrome_for_testing_branded
+  # Enable H.264 by default for compatibility with WebRTC services such as
+  # Teams.
+  proprietary_codecs = true
 
   # libudev usage. This currently only affects the content layer.
   use_udev = (is_linux && !is_castos) || is_chromeos
