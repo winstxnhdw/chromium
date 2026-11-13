@@ -9,6 +9,7 @@
 
 #include "base/memory/weak_ptr.h"
 #include "base/strings/stringprintf.h"
+#include "components/performance_manager/performance_manager_registry_impl.h"
 #include "components/performance_manager/public/graph/frame_node.h"
 #include "components/performance_manager/public/graph/graph.h"
 #include "components/performance_manager/public/graph/process_node.h"
@@ -81,6 +82,30 @@ base::WeakPtr<WorkerNode> GetWorkerNode(const blink::WorkerToken& token) {
 }  // namespace
 
 class WorkerWatcherTest : public PerformanceManagerTestHarness {};
+
+class WorkerWatcherDuplicateClientTest
+    : public WorkerWatcherTest,
+      public ::testing::WithParamInterface<WorkerNode::WorkerType> {
+ protected:
+  blink::WorkerToken CreateClientWorker(const ProcessNode* process_node,
+                                        const FrameNode* frame_node) {
+    if (GetParam() == WorkerNode::WorkerType::kDedicated) {
+      return dedicated_worker_factory()->CreateDedicatedWorker(process_node,
+                                                               frame_node);
+    }
+    return shared_worker_factory()->CreateSharedWorker(process_node);
+  }
+
+  void DestroyClientWorker(const blink::WorkerToken& token) {
+    if (token.Is<blink::DedicatedWorkerToken>()) {
+      dedicated_worker_factory()->DestroyDedicatedWorker(
+          token.GetAs<blink::DedicatedWorkerToken>());
+    } else {
+      shared_worker_factory()->DestroySharedWorker(
+          token.GetAs<blink::SharedWorkerToken>());
+    }
+  }
+};
 
 // This test creates one dedicated worker with a frame client.
 TEST_F(WorkerWatcherTest, SimpleDedicatedWorker) {
@@ -705,6 +730,267 @@ TEST_F(WorkerWatcherTest, ServiceWorkerStartsAndStopsWithExistingClients) {
 
   service_worker_factory()->DestroyServiceWorker(service_worker_version_id);
 }
+
+TEST_P(WorkerWatcherDuplicateClientTest, StopsWithDeadWorkerClient) {
+  SetContents(CreateTestWebContents());
+  content::NavigationSimulator::NavigateAndCommitFromBrowser(
+      web_contents(), GURL("https://www.foo.com/"));
+
+  auto process_node = GetProcessNode(process());
+  auto frame_node = GetFrameNode(main_rfh());
+  ASSERT_TRUE(process_node);
+  ASSERT_TRUE(frame_node);
+
+  const int64_t version_id = service_worker_factory()->CreateServiceWorker();
+  const auto service_token = service_worker_factory()->StartServiceWorker(
+      version_id, process_node.get());
+  auto service_node = GetWorkerNode(service_token);
+  ASSERT_TRUE(service_node);
+  const blink::WorkerToken client_token =
+      CreateClientWorker(process_node.get(), frame_node.get());
+  auto client_node = GetWorkerNode(client_token);
+  ASSERT_TRUE(client_node);
+  const std::string client =
+      service_worker_factory()->AddClient(version_id, client_node.get());
+  ASSERT_FALSE(client.empty());
+  EXPECT_TRUE(IsWorkerClient(service_node, client_node));
+
+  DestroyClientWorker(client_token);
+  ASSERT_FALSE(client_node);
+  EXPECT_TRUE(service_node->GetClientWorkers().empty());
+  service_worker_factory()->StopServiceWorker(version_id);
+  ASSERT_FALSE(service_node);
+
+  // The registration can outlive a stopped service worker and must be
+  // disconnected correctly again after that worker restarts.
+  const auto restarted_token = service_worker_factory()->StartServiceWorker(
+      version_id, process_node.get());
+  service_node = GetWorkerNode(restarted_token);
+  ASSERT_TRUE(service_node);
+  EXPECT_TRUE(service_node->GetClientWorkers().empty());
+  service_worker_factory()->RemoveClient(version_id, client);
+  service_worker_factory()->StopServiceWorker(version_id);
+  service_worker_factory()->DestroyServiceWorker(version_id);
+}
+
+// Multiple controllee IDs can refer to the same worker. Exercise duplicates
+// both before and after that worker has been removed from the graph.
+TEST_P(WorkerWatcherDuplicateClientTest, StartsWithDeadWorkerClients) {
+  SetContents(CreateTestWebContents());
+  content::NavigationSimulator::NavigateAndCommitFromBrowser(
+      web_contents(), GURL("https://www.foo.com/"));
+
+  auto process_node = GetProcessNode(process());
+  auto frame_node = GetFrameNode(main_rfh());
+  ASSERT_TRUE(process_node);
+  ASSERT_TRUE(frame_node);
+
+  const int64_t version_id = service_worker_factory()->CreateServiceWorker();
+  const blink::WorkerToken client_token =
+      CreateClientWorker(process_node.get(), frame_node.get());
+  auto client_node = GetWorkerNode(client_token);
+  ASSERT_TRUE(client_node);
+  const std::string first =
+      service_worker_factory()->AddClient(version_id, client_node.get());
+  const std::string second =
+      service_worker_factory()->AddClient(version_id, client_node.get());
+  ASSERT_FALSE(first.empty());
+  ASSERT_FALSE(second.empty());
+  ASSERT_NE(first, second);
+
+  DestroyClientWorker(client_token);
+  ASSERT_FALSE(client_node);
+
+  const auto service_token = service_worker_factory()->StartServiceWorker(
+      version_id, process_node.get());
+  auto service_node = GetWorkerNode(service_token);
+  ASSERT_TRUE(service_node);
+  EXPECT_TRUE(service_node->GetClientWorkers().empty());
+
+  // Removing one registration must leave the other outstanding. Stopping
+  // and restarting exercises both disconnect-all and connect-all paths.
+  service_worker_factory()->RemoveClient(version_id, first);
+  service_worker_factory()->StopServiceWorker(version_id);
+  ASSERT_FALSE(service_node);
+  const auto restarted_token = service_worker_factory()->StartServiceWorker(
+      version_id, process_node.get());
+  service_node = GetWorkerNode(restarted_token);
+  ASSERT_TRUE(service_node);
+  EXPECT_TRUE(service_node->GetClientWorkers().empty());
+  service_worker_factory()->RemoveClient(version_id, second);
+  service_worker_factory()->StopServiceWorker(version_id);
+  service_worker_factory()->DestroyServiceWorker(version_id);
+}
+
+TEST_P(WorkerWatcherDuplicateClientTest, DeadWorkerNotificationsArriveLate) {
+  SetContents(CreateTestWebContents());
+  content::NavigationSimulator::NavigateAndCommitFromBrowser(
+      web_contents(), GURL("https://www.foo.com/"));
+
+  auto process_node = GetProcessNode(process());
+  auto frame_node = GetFrameNode(main_rfh());
+  ASSERT_TRUE(process_node);
+  ASSERT_TRUE(frame_node);
+  const int64_t version_id = service_worker_factory()->CreateServiceWorker();
+  const auto service_token = service_worker_factory()->StartServiceWorker(
+      version_id, process_node.get());
+  auto service_node = GetWorkerNode(service_token);
+  ASSERT_TRUE(service_node);
+
+  const blink::WorkerToken client_token =
+      CreateClientWorker(process_node.get(), frame_node.get());
+  auto client_node = GetWorkerNode(client_token);
+  ASSERT_TRUE(client_node);
+  const std::string connected_client =
+      service_worker_factory()->AddClient(version_id, client_node.get());
+  ASSERT_FALSE(connected_client.empty());
+  EXPECT_TRUE(IsWorkerClient(service_node, client_node));
+  DestroyClientWorker(client_token);
+  ASSERT_FALSE(client_node);
+
+  content::ServiceWorkerClientInfo client_info;
+  if (client_token.Is<blink::DedicatedWorkerToken>()) {
+    client_info = client_token.GetAs<blink::DedicatedWorkerToken>();
+  } else {
+    client_info = client_token.GetAs<blink::SharedWorkerToken>();
+  }
+  auto* watcher =
+      PerformanceManagerRegistryImpl::GetInstance()->GetWorkerWatcherForTesting(
+          GetBrowserContext());
+  ASSERT_TRUE(watcher);
+
+  // These observer notifications can be delivered after the worker has died.
+  watcher->OnControlleeAdded(version_id, "first", client_info);
+  watcher->OnControlleeAdded(version_id, "second", client_info);
+  service_worker_factory()->RemoveClient(version_id, connected_client);
+  watcher->OnControlleeRemoved(version_id, "first");
+  watcher->OnControlleeAdded(version_id, "third", client_info);
+  watcher->OnControlleeRemoved(version_id, "second");
+  watcher->OnControlleeRemoved(version_id, "third");
+  EXPECT_TRUE(service_node->GetClientWorkers().empty());
+
+  service_worker_factory()->StopServiceWorker(version_id);
+  service_worker_factory()->DestroyServiceWorker(version_id);
+}
+
+TEST_P(WorkerWatcherDuplicateClientTest, LiveClientsShareOneGraphEdge) {
+  SetContents(CreateTestWebContents());
+  content::NavigationSimulator::NavigateAndCommitFromBrowser(
+      web_contents(), GURL("https://www.foo.com/"));
+
+  auto process_node = GetProcessNode(process());
+  auto frame_node = GetFrameNode(main_rfh());
+  ASSERT_TRUE(process_node);
+  ASSERT_TRUE(frame_node);
+  const blink::WorkerToken client_token =
+      CreateClientWorker(process_node.get(), frame_node.get());
+  auto client_node = GetWorkerNode(client_token);
+  ASSERT_TRUE(client_node);
+
+  const int64_t first_version = service_worker_factory()->CreateServiceWorker();
+  const int64_t second_version =
+      service_worker_factory()->CreateServiceWorker();
+  const auto first_token = service_worker_factory()->StartServiceWorker(
+      first_version, process_node.get());
+  const auto second_token = service_worker_factory()->StartServiceWorker(
+      second_version, process_node.get());
+  auto first_service = GetWorkerNode(first_token);
+  auto second_service = GetWorkerNode(second_token);
+  ASSERT_TRUE(first_service);
+  ASSERT_TRUE(second_service);
+
+  const std::string first =
+      service_worker_factory()->AddClient(first_version, client_node.get());
+  const std::string duplicate =
+      service_worker_factory()->AddClient(first_version, client_node.get());
+  const std::string other_service =
+      service_worker_factory()->AddClient(second_version, client_node.get());
+  ASSERT_FALSE(first.empty());
+  ASSERT_FALSE(duplicate.empty());
+  ASSERT_FALSE(other_service.empty());
+  ASSERT_NE(first, duplicate);
+  EXPECT_EQ(first_service->GetClientWorkers().size(), 1u);
+  EXPECT_EQ(client_node->GetChildWorkers().size(), 2u);
+
+  service_worker_factory()->StopServiceWorker(first_version);
+  ASSERT_FALSE(first_service);
+  EXPECT_EQ(client_node->GetChildWorkers().size(), 1u);
+  EXPECT_TRUE(IsWorkerClient(second_service, client_node));
+  const auto restarted_token = service_worker_factory()->StartServiceWorker(
+      first_version, process_node.get());
+  first_service = GetWorkerNode(restarted_token);
+  ASSERT_TRUE(first_service);
+  EXPECT_EQ(first_service->GetClientWorkers().size(), 1u);
+  EXPECT_EQ(client_node->GetChildWorkers().size(), 2u);
+
+  service_worker_factory()->RemoveClient(first_version, first);
+  EXPECT_TRUE(IsWorkerClient(first_service, client_node));
+  service_worker_factory()->RemoveClient(first_version, duplicate);
+  EXPECT_TRUE(first_service->GetClientWorkers().empty());
+  EXPECT_EQ(client_node->GetChildWorkers().size(), 1u);
+  EXPECT_TRUE(IsWorkerClient(second_service, client_node));
+  service_worker_factory()->RemoveClient(second_version, other_service);
+  EXPECT_TRUE(client_node->GetChildWorkers().empty());
+
+  DestroyClientWorker(client_token);
+  service_worker_factory()->StopServiceWorker(first_version);
+  service_worker_factory()->StopServiceWorker(second_version);
+  service_worker_factory()->DestroyServiceWorker(first_version);
+  service_worker_factory()->DestroyServiceWorker(second_version);
+}
+
+TEST_P(WorkerWatcherDuplicateClientTest, LiveClientDiesBeforeRemovals) {
+  SetContents(CreateTestWebContents());
+  content::NavigationSimulator::NavigateAndCommitFromBrowser(
+      web_contents(), GURL("https://www.foo.com/"));
+
+  auto process_node = GetProcessNode(process());
+  auto frame_node = GetFrameNode(main_rfh());
+  ASSERT_TRUE(process_node);
+  ASSERT_TRUE(frame_node);
+  const int64_t version_id = service_worker_factory()->CreateServiceWorker();
+  const auto service_token = service_worker_factory()->StartServiceWorker(
+      version_id, process_node.get());
+  auto service_node = GetWorkerNode(service_token);
+  ASSERT_TRUE(service_node);
+
+  const blink::WorkerToken client_token =
+      CreateClientWorker(process_node.get(), frame_node.get());
+  auto client_node = GetWorkerNode(client_token);
+  ASSERT_TRUE(client_node);
+  const std::string first =
+      service_worker_factory()->AddClient(version_id, client_node.get());
+  const std::string second =
+      service_worker_factory()->AddClient(version_id, client_node.get());
+  ASSERT_FALSE(first.empty());
+  ASSERT_FALSE(second.empty());
+  ASSERT_NE(first, second);
+  EXPECT_EQ(service_node->GetClientWorkers().size(), 1u);
+
+  DestroyClientWorker(client_token);
+  ASSERT_FALSE(client_node);
+  EXPECT_TRUE(service_node->GetClientWorkers().empty());
+  service_worker_factory()->RemoveClient(version_id, first);
+  service_worker_factory()->StopServiceWorker(version_id);
+  const auto restarted_token = service_worker_factory()->StartServiceWorker(
+      version_id, process_node.get());
+  service_node = GetWorkerNode(restarted_token);
+  ASSERT_TRUE(service_node);
+  EXPECT_TRUE(service_node->GetClientWorkers().empty());
+  service_worker_factory()->RemoveClient(version_id, second);
+  service_worker_factory()->StopServiceWorker(version_id);
+  service_worker_factory()->DestroyServiceWorker(version_id);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    WorkerTypes,
+    WorkerWatcherDuplicateClientTest,
+    ::testing::Values(WorkerNode::WorkerType::kDedicated,
+                      WorkerNode::WorkerType::kShared),
+    [](const ::testing::TestParamInfo<WorkerNode::WorkerType>& info) {
+      return info.param == WorkerNode::WorkerType::kDedicated ? "Dedicated"
+                                                              : "Shared";
+    });
 
 // Tests that the WorkerWatcher can handle the case where the service worker
 // starts after it has been assigned a worker client, but the client has

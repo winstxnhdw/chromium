@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "base/check_op.h"
-#include "base/memory/raw_ptr.h"
 #include "base/notreached.h"
 #include "components/performance_manager/frame_node_source.h"
 #include "components/performance_manager/graph/frame_node_impl.h"
@@ -25,8 +24,6 @@
 #include "url/origin.h"
 
 namespace performance_manager {
-
-using WorkerNodeSet = base::flat_set<raw_ptr<WorkerNodeImpl, CtnExperimental>>;
 
 namespace {
 
@@ -101,14 +98,14 @@ void WorkerWatcher::TearDown() {
   // Then clear client-child connections for dedicated workers.
   for (auto& kv : dedicated_worker_child_workers_) {
     const blink::DedicatedWorkerToken& dedicated_worker_token = kv.first;
-    WorkerNodeSet& child_workers = kv.second;
+    WorkerNodeConnectionCounts& child_workers = kv.second;
     DCHECK(!child_workers.empty());
 
     // Disconnect all child workers from |dedicated_worker_token|.
     WorkerNodeImpl* dedicated_worker_node =
         GetDedicatedWorkerNode(dedicated_worker_token);
     CHECK(dedicated_worker_node);
-    for (WorkerNodeImpl* worker_node : child_workers) {
+    for (const auto& [worker_node, _] : child_workers) {
       worker_node->RemoveClientWorker(dedicated_worker_node);
     }
   }
@@ -117,14 +114,14 @@ void WorkerWatcher::TearDown() {
   // Finally, clear client-child connections for shared workers.
   for (auto& kv : shared_worker_child_workers_) {
     const blink::SharedWorkerToken& shared_worker_token = kv.first;
-    WorkerNodeSet& child_workers = kv.second;
+    WorkerNodeConnectionCounts& child_workers = kv.second;
     DCHECK(!child_workers.empty());
 
     // Disconnect all child workers from |shared_worker_token|.
     WorkerNodeImpl* shared_worker_node =
         GetSharedWorkerNode(shared_worker_token);
     CHECK(shared_worker_node);
-    for (WorkerNodeImpl* child_worker_node : child_workers) {
+    for (const auto& [child_worker_node, _] : child_workers) {
       child_worker_node->RemoveClientWorker(shared_worker_node);
     }
   }
@@ -215,18 +212,18 @@ void WorkerWatcher::OnBeforeWorkerDestroyed(
   // Disconnect all child workers before destroying the node.
   auto child_it = dedicated_worker_child_workers_.find(dedicated_worker_token);
   if (child_it != dedicated_worker_child_workers_.end()) {
-    const WorkerNodeSet& child_workers = child_it->second;
-    for (WorkerNodeImpl* child_worker_node : child_workers) {
+    const WorkerNodeConnectionCounts& child_workers = child_it->second;
+    for (const auto& [child_worker_node, _] : child_workers) {
       child_worker_node->RemoveClientWorker(worker_node.get());
     }
 
 #if DCHECK_IS_ON()
-    for (WorkerNodeImpl* worker : child_workers) {
-      // If this is a service worker client, mark it as a missing client.
+    for (const auto& [worker, count] : child_workers) {
+      // If this is a service worker client, mark each relationship as missing.
       if (IsServiceWorkerNode(worker)) {
-        DCHECK(missing_service_worker_clients_[worker]
-                   .insert(dedicated_worker_token)
-                   .second);
+        auto& missing_clients = missing_service_worker_clients_[worker.get()];
+        missing_clients[content::ServiceWorkerClientInfo(
+            dedicated_worker_token)] += count;
       }
     }
 #endif
@@ -280,18 +277,18 @@ void WorkerWatcher::OnBeforeWorkerDestroyed(
   // Disconnect all child workers before destroying the node.
   auto child_it = shared_worker_child_workers_.find(shared_worker_token);
   if (child_it != shared_worker_child_workers_.end()) {
-    const WorkerNodeSet& child_workers = child_it->second;
-    for (WorkerNodeImpl* child_worker_node : child_workers) {
+    const WorkerNodeConnectionCounts& child_workers = child_it->second;
+    for (const auto& [child_worker_node, _] : child_workers) {
       child_worker_node->RemoveClientWorker(worker_node.get());
     }
 
 #if DCHECK_IS_ON()
-    for (WorkerNodeImpl* worker : child_workers) {
-      // If this is a service worker client, mark it as a missing client.
+    for (const auto& [worker, count] : child_workers) {
+      // If this is a service worker client, mark each relationship as missing.
       if (IsServiceWorkerNode(worker)) {
-        DCHECK(missing_service_worker_clients_[worker]
-                   .insert(shared_worker_token)
-                   .second);
+        auto& missing_clients = missing_service_worker_clients_[worker.get()];
+        missing_clients[content::ServiceWorkerClientInfo(
+            shared_worker_token)] += count;
       }
     }
 #endif
@@ -620,22 +617,20 @@ void WorkerWatcher::ConnectDedicatedWorkerClient(
   if (!client_dedicated_worker_node) {
 #if DCHECK_IS_ON()
     if (IsServiceWorkerNode(worker_node)) {
-      bool inserted = missing_service_worker_clients_[worker_node]
-                          .insert(client_dedicated_worker_token)
-                          .second;
-      DCHECK(inserted);
+      auto& missing_clients = missing_service_worker_clients_[worker_node];
+      ++missing_clients[content::ServiceWorkerClientInfo(
+          client_dedicated_worker_token)];
     }
 #endif
     return;
   }
 
-  worker_node->AddClientWorker(client_dedicated_worker_node);
-
-  // Remember that |worker_node| is a child worker of this dedicated worker.
-  bool inserted = dedicated_worker_child_workers_[client_dedicated_worker_token]
-                      .insert(worker_node)
-                      .second;
-  DCHECK(inserted);
+  // Connect the graph only for the first relationship between these workers.
+  auto& child_workers =
+      dedicated_worker_child_workers_[client_dedicated_worker_token];
+  if (++child_workers[worker_node] == 1) {
+    worker_node->AddClientWorker(client_dedicated_worker_node);
+  }
 }
 
 void WorkerWatcher::DisconnectDedicatedWorkerClient(
@@ -648,13 +643,8 @@ void WorkerWatcher::DisconnectDedicatedWorkerClient(
   if (!client_dedicated_worker) {
 #if DCHECK_IS_ON()
     if (IsServiceWorkerNode(worker_node)) {
-      auto it = missing_service_worker_clients_.find(worker_node);
-      CHECK(it != missing_service_worker_clients_.end());
-      DCHECK_EQ(1u, it->second.erase(content::ServiceWorkerClientInfo(
-                        client_dedicated_worker_token)));
-      if (it->second.empty()) {
-        missing_service_worker_clients_.erase(it);
-      }
+      RemoveMissingServiceWorkerClient(worker_node,
+                                       client_dedicated_worker_token);
     }
 #endif
     return;
@@ -666,13 +656,20 @@ void WorkerWatcher::DisconnectDedicatedWorkerClient(
   CHECK(it != dedicated_worker_child_workers_.end());
   auto& child_workers = it->second;
 
-  size_t removed = child_workers.erase(worker_node);
-  DCHECK_EQ(removed, 1u);
+  auto connection_it = child_workers.find(worker_node);
+  CHECK(connection_it != child_workers.end());
+  DCHECK_GT(connection_it->second, 0u);
+  const bool was_last_connection = --connection_it->second == 0;
+  if (was_last_connection) {
+    child_workers.erase(connection_it);
+  }
 
   if (child_workers.empty())
     dedicated_worker_child_workers_.erase(it);
 
-  worker_node->RemoveClientWorker(client_dedicated_worker);
+  if (was_last_connection) {
+    worker_node->RemoveClientWorker(client_dedicated_worker);
+  }
 }
 
 void WorkerWatcher::ConnectSharedWorkerClient(
@@ -685,21 +682,19 @@ void WorkerWatcher::ConnectSharedWorkerClient(
   if (!client_shared_worker_node) {
 #if DCHECK_IS_ON()
     DCHECK(IsServiceWorkerNode(worker_node));
-    bool inserted = missing_service_worker_clients_[worker_node]
-                        .insert(client_shared_worker_token)
-                        .second;
-    DCHECK(inserted);
+    auto& missing_clients = missing_service_worker_clients_[worker_node];
+    ++missing_clients[content::ServiceWorkerClientInfo(
+        client_shared_worker_token)];
 #endif
     return;
   }
 
-  worker_node->AddClientWorker(client_shared_worker_node);
-
-  // Remember that |worker_node| is a child worker of this shared worker.
-  bool inserted = shared_worker_child_workers_[client_shared_worker_token]
-                      .insert(worker_node)
-                      .second;
-  DCHECK(inserted);
+  // Connect the graph only for the first relationship between these workers.
+  auto& child_workers =
+      shared_worker_child_workers_[client_shared_worker_token];
+  if (++child_workers[worker_node] == 1) {
+    worker_node->AddClientWorker(client_shared_worker_node);
+  }
 }
 
 void WorkerWatcher::DisconnectSharedWorkerClient(
@@ -717,12 +712,7 @@ void WorkerWatcher::DisconnectSharedWorkerClient(
 
 #if DCHECK_IS_ON()
     DCHECK(IsServiceWorkerNode(worker_node));
-    auto it = missing_service_worker_clients_.find(worker_node);
-    CHECK(it != missing_service_worker_clients_.end());
-    DCHECK_EQ(1u, it->second.erase(content::ServiceWorkerClientInfo(
-                      client_shared_worker_token)));
-    if (it->second.empty())
-      missing_service_worker_clients_.erase(it);
+    RemoveMissingServiceWorkerClient(worker_node, client_shared_worker_token);
 #endif
     return;
   }
@@ -732,14 +722,21 @@ void WorkerWatcher::DisconnectSharedWorkerClient(
   CHECK(child_it != shared_worker_child_workers_.end());
   auto& child_workers = child_it->second;
 
-  size_t removed = child_workers.erase(worker_node);
-  DCHECK_EQ(removed, 1u);
+  auto connection_it = child_workers.find(worker_node);
+  CHECK(connection_it != child_workers.end());
+  DCHECK_GT(connection_it->second, 0u);
+  const bool was_last_connection = --connection_it->second == 0;
+  if (was_last_connection) {
+    child_workers.erase(connection_it);
+  }
 
   if (child_workers.empty())
     shared_worker_child_workers_.erase(child_it);
 
-  worker_node->RemoveClientWorker(
-      GetSharedWorkerNode(client_shared_worker_token));
+  if (was_last_connection) {
+    worker_node->RemoveClientWorker(
+        GetSharedWorkerNode(client_shared_worker_token));
+  }
 }
 
 void WorkerWatcher::ConnectAllServiceWorkerClients(
@@ -904,12 +901,25 @@ WorkerNodeImpl* WorkerWatcher::GetServiceWorkerNode(int64_t version_id) const {
 
 #if DCHECK_IS_ON()
 bool WorkerWatcher::IsServiceWorkerNode(WorkerNodeImpl* worker_node) {
-  for (const auto& kv : service_worker_nodes_) {
-    if (kv.second.get() == worker_node)
-      return true;
-  }
+  // The node has already been moved out of service_worker_nodes_ while its
+  // client connections are disconnected during service-worker shutdown.
+  return worker_node->GetWorkerType() == WorkerNode::WorkerType::kService;
+}
 
-  return false;
+void WorkerWatcher::RemoveMissingServiceWorkerClient(
+    WorkerNodeImpl* worker_node,
+    const content::ServiceWorkerClientInfo& client_info) {
+  auto it = missing_service_worker_clients_.find(worker_node);
+  CHECK(it != missing_service_worker_clients_.end());
+  auto client_it = it->second.find(client_info);
+  CHECK(client_it != it->second.end());
+  DCHECK_GT(client_it->second, 0u);
+  if (--client_it->second == 0) {
+    it->second.erase(client_it);
+  }
+  if (it->second.empty()) {
+    missing_service_worker_clients_.erase(it);
+  }
 }
 #endif
 

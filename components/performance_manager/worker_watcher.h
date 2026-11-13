@@ -199,6 +199,9 @@ class WorkerWatcher : public content::DedicatedWorkerService::Observer,
 
 #if DCHECK_IS_ON()
   bool IsServiceWorkerNode(WorkerNodeImpl* worker_node);
+  void RemoveMissingServiceWorkerClient(
+      WorkerNodeImpl* worker_node,
+      const content::ServiceWorkerClientInfo& client_info);
 #endif
 
   SEQUENCE_CHECKER(sequence_checker_);
@@ -262,14 +265,15 @@ class WorkerWatcher : public content::DedicatedWorkerService::Observer,
   base::flat_map<content::GlobalRenderFrameHostId, WorkerNodeConnections>
       frame_node_child_worker_connections_;
 
-  // Maps each dedicated worker to all its child workers.
-  using WorkerNodeSet =
-      base::flat_set<raw_ptr<WorkerNodeImpl, CtnExperimental>>;
-  base::flat_map<blink::DedicatedWorkerToken, WorkerNodeSet>
+  // Maps each worker client to the number of connections to each child worker.
+  // Multiple service-worker controllees can refer to the same worker client,
+  // but are represented by a single edge in the graph.
+  using WorkerNodeConnectionCounts =
+      base::flat_map<raw_ptr<WorkerNodeImpl, CtnExperimental>, size_t>;
+  base::flat_map<blink::DedicatedWorkerToken, WorkerNodeConnectionCounts>
       dedicated_worker_child_workers_;
 
-  // Maps each shared worker to all its child workers.
-  base::flat_map<blink::SharedWorkerToken, WorkerNodeSet>
+  base::flat_map<blink::SharedWorkerToken, WorkerNodeConnectionCounts>
       shared_worker_child_workers_;
 
 #if DCHECK_IS_ON()
@@ -279,10 +283,10 @@ class WorkerWatcher : public content::DedicatedWorkerService::Observer,
   // a client frame node to a worker.
   base::flat_map<WorkerNodeImpl*, int> detached_frame_count_per_worker_;
 
-  // Keeps track of shared and dedicated workers that were not present when
-  // a service worker tried to add a client relationship for them.
+  // Counts service-worker client relationships whose worker node was missing
+  // when connected, or was destroyed before the relationship was removed.
   base::flat_map<WorkerNodeImpl*,
-                 base::flat_set<content::ServiceWorkerClientInfo>>
+                 base::flat_map<content::ServiceWorkerClientInfo, size_t>>
       missing_service_worker_clients_;
 #endif  // DCHECK_IS_ON()
 };
